@@ -95,10 +95,10 @@ def GaussianStack(image, dim_factor, sigma, stack_depth):
     return stack
 
 #Laplacian stack given a Gaussian stack
-def LaplacianStack(stack):
+def LaplacianStack(image, stack):
     lap_stack = []
-    for i in range(len(stack) - 1):
+    lap_stack.append(image - stack[0])
+    for i in range(1, len(stack)):
         lap = stack[i] - stack[i+1]
         lap_stack.append(lap)
-    lap_stack.append(stack[len(stack)-1])
     return lap_stack
