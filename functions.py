@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import skimage as sk
 import skimage.io as skio
+import cv2
 from skimage.draw import polygon
 from scipy.interpolate import interp2d
 
@@ -83,7 +84,7 @@ def interpFunc(xs, ys, image):
 def lowPass(image, size, sigma):
     kernel = cv2.getGaussianKernel(size, sigma)
     kernel = np.multiply(kernel, kernel.transpose())
-    return np_clip(cv2.filter2D(image, -1, kernel))
+    return np.clip(cv2.filter2D(image, -1, kernel), 0, 255)
 
 #Gaussian stack of IMAGE, with DIM_FACTOR the size of the Gaussian kernel
 def GaussianStack(image, dim_factor, sigma, stack_depth):
@@ -98,7 +99,11 @@ def GaussianStack(image, dim_factor, sigma, stack_depth):
 def LaplacianStack(image, stack):
     lap_stack = []
     lap_stack.append(image - stack[0])
-    for i in range(1, len(stack)):
+    for i in range(1, len(stack) - 1):
         lap = stack[i] - stack[i+1]
         lap_stack.append(lap)
+    last_level = stack[len(stack) - 1]
+    last_kernel = lowPass(image, 45, len(stack) ** 2)  
+    last_level = last_level - last_kernel
+    lap_stack.append(last_level)
     return lap_stack

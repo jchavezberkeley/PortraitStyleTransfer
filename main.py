@@ -54,12 +54,40 @@ def getFacialLandmarks(image):
     
     return shape, triangulation
 
-def getGaussianStacks(inputIm, example):
-    gStackInput = GaussianStack(inputIm, 45, 2, 3)
-    gStackExample = GaussianStack(inputIm, 45, 2, 3)
+def getGaussianStacks(inputIm, exampleIm):
+    gStackInput = GaussianStack(inputIm, 45, 2, 5)
+    gStackExample = GaussianStack(exampleIm, 45, 2, 5)
+    
     return gStackInput, gStackExample
 
-def getLaplacianStacks(gStackInput, gStackExample):
+def getLaplacianStacks(gStackInput, gStackExample, inputIm, exampleIm):
+    lStackInput = LaplacianStack(inputIm, gStackInput)
+    lStackExample = LaplacianStack(exampleIm, gStackExample)
     
-           
+    return lStackInput, lStackExample
+
+def getResidualStack(img, imgStack):
+    residualStack = []
+    for g in imgStack:
+        residualStack.append(cv2.convolve(img, g))
+    return residualStack
+
+def getLocalEnergyStack(gStack, lStack, shape, triangulation):
+    energyStack = []
+    for i in range(len(lStack)):
+        laplacian = lStack[i]
+        laplacian_sq = np.square(laplacian)
+        energyStack.append(lowPass(laplacian_sq, 45, 2 ** (i+1)))
+    for im in energyStack:
+        showImage(im)
+    return energyStack
+
+jose = skio.imread('jose.jpg')
+george = skio.imread('george.jpg')
+gStackJose, gStackGeorge = getGaussianStacks(jose, george)
+lStackJose, lStackGeorge = getLaplacianStacks(gStackJose, gStackGeorge, jose, george)
+getLocalEnergyStack(gStackJose, lStackJose, None, None)
+
+
+
 
