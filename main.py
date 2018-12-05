@@ -13,6 +13,8 @@ from imutils import face_utils
 import imutils
 import argparse
 import dlib
+from skimage.draw import polygon
+from scipy.interpolate import interp2d
 from functions import *
 
 def getFacialLandmarks(image):
@@ -81,10 +83,12 @@ def getLocalEnergyStack(gStack, lStack):
         energyStack.append(lowPass(laplacian_sq, 45, 2 ** (i+1)))
     return energyStack
 
-def warpEnergyStack(eStack, inputShape, inputTriangulation, exampleShape, exampleTriangulation):
+def warpEnergyStack(inputIm, eStack, inputShape, inputTriangulation, exampleShape, exampleTriangulation):
     warpedStack = []
     for elem in eStack:
         #WARP EVERY TRIANGLE FROM EXAMPLE TRIANGULATION TO INPUT TRIANGULATION HERE
+        warped = morph(inputIm, elem, inputShape, exampleShape, 0, 1, IS_GRAY=False)
+        warpedStack.append(warped)
     return warpedStack
 
 jose = skio.imread('jose.jpg')
@@ -92,9 +96,13 @@ george = skio.imread('george.jpg')
 gStackJose, gStackGeorge = getGaussianStacks(jose, george)
 lStackJose, lStackGeorge = getLaplacianStacks(gStackJose, gStackGeorge, jose, george)
 getLocalEnergyStack(gStackJose, lStackJose)
+georgeEStack = getLocalEnergyStack(gStackGeorge, lStackGeorge)
 inputShape, inputTriangulation = getFacialLandmarks(jose)
 exampleShape, exampleTriangulation = getFacialLandmarks(george)
-print(inputShape)
+print('hello')
+warpedStack = warpEnergyStack(jose, georgeEStack, inputShape, inputTriangulation, exampleShape, exampleTriangulation)
+for im in warpedStack:
+    showImage(im)
 
 
 
