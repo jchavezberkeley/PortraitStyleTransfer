@@ -55,6 +55,10 @@ def homo_to_points(homo_matrix):
     values = homo_matrix[:2]
     print(values.transpose())
 
+#Rescaels image between 0 and 1
+def rescale(img):
+    return (img - img.min()) / (img.max() - img.min())
+
 
 """
 Used to recover the affine transformation given two sets of points
@@ -84,7 +88,7 @@ def interpFunc(xs, ys, image):
 def lowPass(image, size, sigma):
     kernel = cv2.getGaussianKernel(size, sigma)
     kernel = np.multiply(kernel, kernel.transpose())
-    return np.clip(cv2.filter2D(image, -1, kernel), 0, 255)
+    return np.clip(cv2.filter2D(image, -1, kernel), 0, 1)
 
 #Gaussian stack of IMAGE, with DIM_FACTOR the size of the Gaussian kernel
 def GaussianStack(image, dim_factor, sigma, stack_depth):
@@ -101,9 +105,11 @@ def LaplacianStack(image, stack):
     lap_stack.append(image - stack[0])
     for i in range(1, len(stack) - 1):
         lap = stack[i] - stack[i+1]
+        lap = rescale(lap)
         lap_stack.append(lap)
     last_level = stack[len(stack) - 1]
     last_kernel = lowPass(image, 45, len(stack) ** 2)  
     last_level = last_level - last_kernel
+    last_level = rescale(last_level)
     lap_stack.append(last_level)
     return lap_stack
