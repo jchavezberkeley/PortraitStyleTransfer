@@ -11,7 +11,6 @@ import imutils
 import argparse
 import dlib
 from functions import *
-from make_mask import save_mask
 
 def getFacialLandmarks(image):
     detector = dlib.get_frontal_face_detector()
@@ -57,9 +56,9 @@ def getGaussianStacks(inputIm, exampleIm, stack_depth):
     gStackExample = GaussianStack(exampleIm, 45, 2, stack_depth)
     return gStackInput, gStackExample
 
-def getLaplacianStacks(gStackInput, gStackExample, inputIm, exampleIm):
-    lStackInput = LaplacianStack(inputIm, gStackInput)
-    lStackExample = LaplacianStack(exampleIm, gStackExample)
+def getLaplacianStacks(inputIm, exampleIm, input_mask, example_mask, stack_depth):
+    lStackInput = LaplacianStackAlt(inputIm, input_mask, stack_depth)
+    lStackExample = LaplacianStackAlt(exampleIm, example_mask, stack_depth)
     return lStackInput, lStackExample
 
 def getResidualStack(img, imgStack):
@@ -68,8 +67,8 @@ def getResidualStack(img, imgStack):
         residualStack.append(cv2.convolve(img, g))
     return residualStack
 
-def getResidual(image, stack_depth):
-    return lowPass(image, 45, 2**stack_depth)
+def getResidual(image, mask, stack_depth):
+    return lowPass(image, 5*(2**stack_depth), 2**stack_depth)
 
 def getLocalEnergyStack(lStack):
     energyStack = []
@@ -111,47 +110,50 @@ def robustTransfer(inputLapStack, warpedStack, inputEStack):
     return newGainStack
 
 #This is based more off of the matlab code
-def styleTransfer(input, example):
+def styleTransfer(input, example, input_gray, example_gray):
     #Getting masks around the regions of interest
     input_mask = readGrayScale('jose_mask.jpg')
     example_mask = readGrayScale('george_mask.jpg')
-
+    showImage(input_mask)
+    showImage(example_mask)
     inputShape, inputTri = getFacialLandmarks(input)
     exampleShape, exampleTri = getFacialLandmarks(example)
 
     stack_depth = 6
-    gStackInput, gStackExample = getGaussianStacks(input_gray, example_gray, stack_depth)
-    lStackInput, lStackExample = getLaplacianStacks(gStackInput, gStackExample, input_gray, example_gray)
+    #The implementation given for the paper doesn't really use the Gaussian stack
+    #gStackInput, gStackExample = getGaussianStacks(input_gray, example_gray, stack_depth)
+    #lStackInput, lStackExample = getLaplacianStacks(gStackInput, gStackExample, input_gray, example_gray)
+    lStackInput, lStackExample = getLaplacianStacks(input_gray, example_gray, input_mask, example_mask, stack_depth)
 
-    input_residual = getResidual(input_gray, stack_depth)
-    example_residual = getResidual(example_gray, stack_depth)
+    input_residual = getResidual(input_gray, input_mask, stack_depth)
+    example_residual = getResidual(example_gray, example_mask, stack_depth)
 
-    exampleWarpedLap = warpLapStack(lStackExample, exampleShape, inputShape, inputTri)
-    for w in exampleWarpedLap:
-        showImage(w)
-
-    inputEStack = getLocalEnergyStack(lStackInput)
-    #exampleEStack = getLocalEnergyStack(lStackExample)
-    exampleEStackWarped = getLocalEnergyStack(exampleWarpedLap)
-
-    #warpedStack = warpEnergyStack(exampleEStack, inputShape, inputTri, exampleShape)
-    #for w in warpedStack:
+    #exampleWarpedLap = warpLapStack(lStackExample, exampleShape, inputShape, inputTri)
+    #for w in exampleWarpedLap:
         #showImage(w)
 
-    gainStack = robustTransfer(lStackInput, exampleEStackWarped, inputEStack)
-    for g in gainStack:
-        showImage(g)
+    inputEStack = getLocalEnergyStack(lStackInput)
+    exampleEStack = getLocalEnergyStack(lStackExample)
+    #exampleEStackWarped = getLocalEnergyStack(exampleWarpedLap)
+
+    warpedStack = warpEnergyStack(exampleEStack, inputShape, inputTri, exampleShape)
+
+    #gainStack = robustTransfer(lStackInput, exampleEStackWarped, inputEStack)
+    gainStack = robustTransfer(lStackInput, warpedStack, inputEStack)
 
     warpedEResidual = warp(example_residual, exampleShape, inputShape, inputTri)
-    showImage(warpedEResidual)
+    
     gainStack.append(warpedEResidual)
     output_test = sumStack(gainStack)
     showImage(output_test)
-    saveImage('./test.jpg', output_test)
+    saveImage('./test_energy_first.jpg', output_test)
+
+
+
 
 input = read('jose.jpg')
 example = read('george.jpg')
 input_gray = readGrayScale('jose.jpg')
 example_gray = readGrayScale('george.jpg')
 
-styleTransfer(input_gray, example_gray)
+styleTransfer(input, example, input_gray, example_gray)

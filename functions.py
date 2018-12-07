@@ -144,7 +144,10 @@ def LaplacianStack(image, stack):
 def lowPassMask(image, size, sigma, mask):
     mask_G = lowPass(mask, size, sigma)
     output = lowPass(image*mask, size, sigma)
-    output = output / mask_G
+    showImage(output)
+    output = rescale(output / mask_G)
+    showImage(output)
+    return output
 """
 This method is based specifically on the matlab version of the paper.
 One thing it does is increase the size of the Gaussian kernel at each level
@@ -152,15 +155,16 @@ Likewise, I try to match the implementation as much as possible.
 This version also takes in a mask but haven't added that part yet.
 Read section 'Using a Mask' in the paper for why this is important.
 """
-def LaplacianStackAlt(image, stack_depth):
+def LaplacianStackAlt(image, mask, stack_depth):
     stack = []
-    stack[0] = image
+    stack.append(image)
     for i in range(1, stack_depth):
         sigma = 2 ** i
-        stack.append(lowPassMask(image, sigma*5, sigma, mask))
+        #stack.append(lowPassMask(image, sigma*5, sigma, mask))
+        stack.append(lowPass(image, sigma*5, sigma))
 
     for i in range(len(stack)-1):
-        stack[i] = stack[i] - stack[i-1]
+        stack[i] = rescale((stack[i] - stack[i+1]))
     return stack
 
 #Aggregates all images in STACK
