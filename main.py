@@ -119,48 +119,39 @@ def styleTransfer(input, example):
     inputShape, inputTri = getFacialLandmarks(input)
     exampleShape, exampleTri = getFacialLandmarks(example)
 
+    stack_depth = 6
+    gStackInput, gStackExample = getGaussianStacks(input_gray, example_gray, stack_depth)
+    lStackInput, lStackExample = getLaplacianStacks(gStackInput, gStackExample, input_gray, example_gray)
+
+    input_residual = getResidual(input_gray, stack_depth)
+    example_residual = getResidual(example_gray, stack_depth)
+
+    exampleWarpedLap = warpLapStack(lStackExample, exampleShape, inputShape, inputTri)
+    for w in exampleWarpedLap:
+        showImage(w)
+
+    inputEStack = getLocalEnergyStack(lStackInput)
+    #exampleEStack = getLocalEnergyStack(lStackExample)
+    exampleEStackWarped = getLocalEnergyStack(exampleWarpedLap)
+
+    #warpedStack = warpEnergyStack(exampleEStack, inputShape, inputTri, exampleShape)
+    #for w in warpedStack:
+        #showImage(w)
+
+    gainStack = robustTransfer(lStackInput, exampleEStackWarped, inputEStack)
+    for g in gainStack:
+        showImage(g)
+
+    warpedEResidual = warp(example_residual, exampleShape, inputShape, inputTri)
+    showImage(warpedEResidual)
+    gainStack.append(warpedEResidual)
+    output_test = sumStack(gainStack)
+    showImage(output_test)
+    saveImage('./test.jpg', output_test)
+
 input = read('jose.jpg')
 example = read('george.jpg')
 input_gray = readGrayScale('jose.jpg')
 example_gray = readGrayScale('george.jpg')
 
-
-
-inputShape, inputTri = getFacialLandmarks(input)
-exampleShape, exampleTri = getFacialLandmarks(example)
-#morph_example = warp(george_gray, exampleShape, inputShape, inputTri)
-
-stack_depth = 6
-gStackInput, gStackExample = getGaussianStacks(input_gray, example_gray, stack_depth)
-lStackInput, lStackExample = getLaplacianStacks(gStackInput, gStackExample, input_gray, example_gray)
-
-input_residual = getResidual(input_gray, stack_depth)
-example_residual = getResidual(example_gray, stack_depth)
-
-exampleWarpedLap = warpLapStack(lStackExample, exampleShape, inputShape, inputTri)
-for w in exampleWarpedLap:
-    showImage(w)
-
-inputEStack = getLocalEnergyStack(lStackInput)
-#exampleEStack = getLocalEnergyStack(lStackExample)
-exampleEStackWarped = getLocalEnergyStack(exampleWarpedLap)
-
-#warpedStack = warpEnergyStack(exampleEStack, inputShape, inputTri, exampleShape)
-#for w in warpedStack:
-    #showImage(w)
-
-gainStack = robustTransfer(lStackInput, exampleEStackWarped, inputEStack)
-for g in gainStack:
-    showImage(g)
-
-warpedEResidual = warp(example_residual, exampleShape, inputShape, inputTri)
-showImage(warpedEResidual)
-gainStack.append(warpedEResidual)
-output_test = sumStack(gainStack)
-showImage(output_test)
-saveImage('./test.jpg', output_test)
-#showTri(morph_example, inputShape, inputTri)
-#showTri(jose, inputShape, inputTri)
-#showTri(george, exampleShape, exampleTri)
-#for im in warpedStack:
-    #showImage(im)
+styleTransfer(input_gray, example_gray)
