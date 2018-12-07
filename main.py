@@ -93,6 +93,16 @@ def warpEnergyStack(inputIm, eStack, inputShape, inputTri, exampleShape, example
         warpedStack.append(warped)
     return warpedStack
 
+def robustTransfer(inputLapStack, warpedStack, exampleEnergyStack):
+    newGainStack = []
+    epsilon = 0.01 ** 2
+    for i in range(len(inputLapStack)):
+        division = (warpedStack[i] / (exampleEnergyStack[i] + epsilon))
+        gain = square_root(division)
+        newLayer = inputLapStack[i] * gain
+        newGainStack.append(newLayer)
+    return newGainStack
+
 jose = read('jose.jpg')
 george = read('george.jpg')
 jose_gray = readGrayScale('jose.jpg')
@@ -100,12 +110,12 @@ george_gray = readGrayScale('george.jpg')
 
 inputShape, inputTri = getFacialLandmarks(jose)
 exampleShape, exampleTri = getFacialLandmarks(george)
-morph_example = warp(george_gray, exampleShape, inputShape, inputTri)
+#morph_example = warp(george_gray, exampleShape, inputShape, inputTri)
 
-
-stack_depth = 6
+stack_depth = 3
 gStackJose, gStackGeorge = getGaussianStacks(jose_gray, george_gray, stack_depth)
 lStackJose, lStackGeorge = getLaplacianStacks(gStackJose, gStackGeorge, jose_gray, george_gray)
+
 jose_residual = getResidual(jose_gray, stack_depth)
 george_residual = getResidual(george_gray, stack_depth)
 
@@ -113,8 +123,14 @@ joseEStack = getLocalEnergyStack(lStackJose)
 georgeEStack = getLocalEnergyStack(lStackGeorge)
 
 warpedStack = warpEnergyStack(jose_gray, georgeEStack, inputShape, inputTri, exampleShape, exampleTri)
-showTri(morph_example, inputShape, inputTri)
-showTri(jose, inputShape, inputTri)
-showTri(george, exampleShape, exampleTri)
-for im in warpedStack:
-    showImage(im)
+for w in warpedStack:
+    showImage(w)
+gainStack = robustTransfer(lStackJose, warpedStack, georgeEStack)
+for g in gainStack:
+    showImage(g)
+
+#showTri(morph_example, inputShape, inputTri)
+#showTri(jose, inputShape, inputTri)
+#showTri(george, exampleShape, exampleTri)
+#for im in warpedStack:
+    #showImage(im)

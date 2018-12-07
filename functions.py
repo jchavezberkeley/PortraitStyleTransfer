@@ -83,6 +83,8 @@ def rescale(img):
 def L2Norm(image):
     np.linalg.norm(image)
 
+def square_root(matrix):
+    return np.sqrt(matrix)
 
 """
 Used to recover the affine transformation given two sets of points
@@ -170,7 +172,7 @@ def warp(image, source_points, target_points, tri):
 
     return out_image
 
-
+"""
 def getInvWarpMat(triangleIndices, srcKeypoints, avgKeypoints):
     # Initialize arrays for holding x and y indices of triangle vertices
     srcImg_x = np.zeros(3)
@@ -312,3 +314,4 @@ def morph(imgA, imgB, srcKeypoints, targetKeypoints, warp_frac, dissolve_frac, I
     # skio.imshow(midway)
     # skio.show()
     return midway
+"""
