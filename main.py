@@ -1,21 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import skimage as sk
-#import skimage.util as skutil
 import skimage.io as skio
-#import skimage.color as skcolor
 import cv2
-import scipy.sparse
-import scipy.ndimage.interpolation
-import math
+#import scipy.sparse
+#import scipy.ndimage.interpolation
 import skimage.transform as sktr
 from imutils import face_utils
 import imutils
 import argparse
 import dlib
-from skimage.draw import polygon
-from scipy.interpolate import interp2d
 from functions import *
+from make_mask import save_mask
 
 def getFacialLandmarks(image):
     detector = dlib.get_frontal_face_detector()
@@ -84,7 +80,7 @@ def getLocalEnergyStack(lStack):
         energyStack.append(energy)
     return energyStack
 
-def warpEnergyStack(inputIm, eStack, inputShape, inputTri, exampleShape, exampleTri):
+def warpEnergyStack(eStack, inputShape, inputTri, exampleShape):
     warpedStack = []
     for elem in eStack:
         #WARP EVERY TRIANGLE FROM EXAMPLE TRIANGULATION TO INPUT TRIANGULATION HERE
@@ -93,42 +89,76 @@ def warpEnergyStack(inputIm, eStack, inputShape, inputTri, exampleShape, example
         warpedStack.append(warped)
     return warpedStack
 
-def robustTransfer(inputLapStack, warpedStack, exampleEnergyStack):
+def warpLapStack(lStack, exampleShape, inputShape, inputTri):
+    warpedLapStack = []
+    for elem in lStack:
+        warped = warp(elem, exampleShape, inputShape, inputTri)
+        warpedLapStack.append(warped)
+    return warpedLapStack
+
+def robustTransfer(inputLapStack, warpedStack, inputEStack):
     newGainStack = []
-    epsilon = 0.01 ** 2
+    e_0 = 0.01 ** 2
+    gain_max = 2.8
+    gain_min = 0.9
     for i in range(len(inputLapStack)):
-        division = (warpedStack[i] / (exampleEnergyStack[i] + epsilon))
-        gain = square_root(division)
+        gain = (warpedStack[i] / (inputEStack[i] + e_0)) ** 0.5
+        gain[gain > gain_max] = gain_max
+        gain[gain < gain_min] = gain_min
+        showImage(gain)
         newLayer = inputLapStack[i] * gain
         newGainStack.append(newLayer)
     return newGainStack
 
-jose = read('jose.jpg')
-george = read('george.jpg')
-jose_gray = readGrayScale('jose.jpg')
-george_gray = readGrayScale('george.jpg')
+#This is based more off of the matlab code
+def styleTransfer(input, example):
+    #Getting masks around the regions of interest
+    input_mask = readGrayScale('jose_mask.jpg')
+    example_mask = readGrayScale('george_mask.jpg')
 
-inputShape, inputTri = getFacialLandmarks(jose)
-exampleShape, exampleTri = getFacialLandmarks(george)
+    inputShape, inputTri = getFacialLandmarks(input)
+    exampleShape, exampleTri = getFacialLandmarks(example)
+
+input = read('jose.jpg')
+example = read('george.jpg')
+input_gray = readGrayScale('jose.jpg')
+example_gray = readGrayScale('george.jpg')
+
+
+
+inputShape, inputTri = getFacialLandmarks(input)
+exampleShape, exampleTri = getFacialLandmarks(example)
 #morph_example = warp(george_gray, exampleShape, inputShape, inputTri)
 
-stack_depth = 3
-gStackJose, gStackGeorge = getGaussianStacks(jose_gray, george_gray, stack_depth)
-lStackJose, lStackGeorge = getLaplacianStacks(gStackJose, gStackGeorge, jose_gray, george_gray)
+stack_depth = 6
+gStackInput, gStackExample = getGaussianStacks(input_gray, example_gray, stack_depth)
+lStackInput, lStackExample = getLaplacianStacks(gStackInput, gStackExample, input_gray, example_gray)
 
-jose_residual = getResidual(jose_gray, stack_depth)
-george_residual = getResidual(george_gray, stack_depth)
+input_residual = getResidual(input_gray, stack_depth)
+example_residual = getResidual(example_gray, stack_depth)
 
-joseEStack = getLocalEnergyStack(lStackJose)
-georgeEStack = getLocalEnergyStack(lStackGeorge)
-
-warpedStack = warpEnergyStack(jose_gray, georgeEStack, inputShape, inputTri, exampleShape, exampleTri)
-for w in warpedStack:
+exampleWarpedLap = warpLapStack(lStackExample, exampleShape, inputShape, inputTri)
+for w in exampleWarpedLap:
     showImage(w)
-gainStack = robustTransfer(lStackJose, warpedStack, georgeEStack)
+
+inputEStack = getLocalEnergyStack(lStackInput)
+#exampleEStack = getLocalEnergyStack(lStackExample)
+exampleEStackWarped = getLocalEnergyStack(exampleWarpedLap)
+
+#warpedStack = warpEnergyStack(exampleEStack, inputShape, inputTri, exampleShape)
+#for w in warpedStack:
+    #showImage(w)
+
+gainStack = robustTransfer(lStackInput, exampleEStackWarped, inputEStack)
 for g in gainStack:
     showImage(g)
 
+warpedEResidual = warp(example_residual, exampleShape, inputShape, inputTri)
+showImage(warpedEResidual)
+gainStack.append(warpedEResidual)
+output_test = sumStack(gainStack)
+showImage(output_test)
+saveImage('./test.jpg', output_test)
 #showTri(morph_example, inputShape, inputTri)
 #showTri(jose, inputShape, inputTri)
 #showTri(george, exampleShape, exampleTri)

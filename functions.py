@@ -110,11 +110,16 @@ def interp(fraction, item1, item2):
 def interpFunc(xs, ys, image):
     return interp2d(xs, ys, image)
 
+def getKernel(size, sigma):
+    return cv2.getGaussianKernel(size, sigma)
+
 #Low pass of a given IMAGE with kernel SIZE and SIGMA
 def lowPass(image, size, sigma):
-    kernel = cv2.getGaussianKernel(size, sigma)
+    #kernel = cv2.getGaussianKernel(size, sigma)
+    kernel = getKernel(size, sigma)
     kernel = np.multiply(kernel, kernel.transpose())
     return cv2.filter2D(image, -1, kernel)
+
 
 #Gaussian stack of IMAGE, with DIM_FACTOR the size of the Gaussian kernel
 def GaussianStack(image, dim_factor, sigma, stack_depth):
@@ -135,6 +140,37 @@ def LaplacianStack(image, stack):
         lap_stack.append(lap)
     return lap_stack
 
+
+def lowPassMask(image, size, sigma, mask):
+    mask_G = lowPass(mask, size, sigma)
+    output = lowPass(image*mask, size, sigma)
+    output = output / mask_G
+"""
+This method is based specifically on the matlab version of the paper.
+One thing it does is increase the size of the Gaussian kernel at each level
+Likewise, I try to match the implementation as much as possible.
+This version also takes in a mask but haven't added that part yet.
+Read section 'Using a Mask' in the paper for why this is important.
+"""
+def LaplacianStackAlt(image, stack_depth):
+    stack = []
+    stack[0] = image
+    for i in range(1, stack_depth):
+        sigma = 2 ** i
+        stack.append(lowPassMask(image, sigma*5, sigma, mask))
+
+    for i in range(len(stack)-1):
+        stack[i] = stack[i] - stack[i-1]
+    return stack
+
+#Aggregates all images in STACK
+def sumStack(stack):
+    final_image = stack[0]
+    for i in range(1, len(stack)):
+        final_image += stack[i]
+    return rescale(final_image)
+
+#Warps IMAGE with SOURCE_POINTS to TARGET_POINTS with TRI
 def warp(image, source_points, target_points, tri):
     imh, imw = image.shape
     out_image = np.zeros((imh, imw))
