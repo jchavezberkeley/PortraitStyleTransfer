@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import skimage as sk
-import skimage.util
+#import skimage.util as skutil
 import skimage.io as skio
-import skimage.color
+#import skimage.color as skcolor
 import cv2
 import scipy.sparse
 import scipy.ndimage.interpolation
@@ -22,7 +22,7 @@ def getFacialLandmarks(image):
     predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     rects = detector(gray, 1)
-    plt.figure()
+    #plt.figure()
     triangulation = None
     shape = None
     # loop over the face detections
@@ -30,7 +30,7 @@ def getFacialLandmarks(image):
         # determine the facial landmarks for the face region, then
         # convert the facial landmark (x, y)-coordinates to a NumPy
         # array
-        shape = predictor(gray, rect)
+        shape = predictor(image, rect)
         shape = face_utils.shape_to_np(shape)
 
         # # convert dlib's rectangle to a OpenCV-style bounding box
@@ -44,29 +44,26 @@ def getFacialLandmarks(image):
 
         # loop over the (x, y)-coordinates for the facial landmarks
         # and draw them on the image
-        for (x, y) in shape:
-            plt.scatter(x, y, s=10)
+        #for (x, y) in shape:
+            #plt.scatter(x, y, s=10)
 
 
         corners = [(0,0), (image.shape[1],0), (0, image.shape[0]), (image.shape[1], image.shape[0])]
-        
+
         for corner in corners:
             shape = np.vstack((shape, corner))
         triangulation = scipy.spatial.Delaunay(shape)
-    
+
     return shape, triangulation
 
-def getGaussianStacks(inputIm, exampleIm):
-    gStackInput = GaussianStack(inputIm, 45, 2, 3)
-    gStackExample = GaussianStack(exampleIm, 45, 2, 3)
-    
+def getGaussianStacks(inputIm, exampleIm, stack_depth):
+    gStackInput = GaussianStack(inputIm, 45, 2, stack_depth)
+    gStackExample = GaussianStack(exampleIm, 45, 2, stack_depth)
     return gStackInput, gStackExample
 
 def getLaplacianStacks(gStackInput, gStackExample, inputIm, exampleIm):
     lStackInput = LaplacianStack(inputIm, gStackInput)
     lStackExample = LaplacianStack(exampleIm, gStackExample)
-    # for im in lStackExample:
-    #     showImage(im)
     return lStackInput, lStackExample
 
 def getResidualStack(img, imgStack):
@@ -75,34 +72,49 @@ def getResidualStack(img, imgStack):
         residualStack.append(cv2.convolve(img, g))
     return residualStack
 
-def getLocalEnergyStack(gStack, lStack):
+def getResidual(image, stack_depth):
+    return lowPass(image, 45, 2**stack_depth)
+
+def getLocalEnergyStack(lStack):
     energyStack = []
     for i in range(len(lStack)):
         laplacian = lStack[i]
-        laplacian_sq = np.square(laplacian)
-        energyStack.append(lowPass(laplacian_sq, 45, 2 ** (i+1)))
+        laplacian_squared = np.square(laplacian)
+        energy = lowPass(laplacian_squared, 45, 2 ** (i+1))
+        energyStack.append(energy)
     return energyStack
 
-def warpEnergyStack(inputIm, eStack, inputShape, inputTriangulation, exampleShape, exampleTriangulation):
+def warpEnergyStack(inputIm, eStack, inputShape, inputTri, exampleShape, exampleTri):
     warpedStack = []
     for elem in eStack:
         #WARP EVERY TRIANGLE FROM EXAMPLE TRIANGULATION TO INPUT TRIANGULATION HERE
-        warped = morph(inputIm, elem, inputShape, exampleShape, 0, 1, IS_GRAY=False)
+        #warped = morph(inputIm, elem, inputShape, exampleShape, 0, 1, IS_GRAY=False)
+        warped = warp(elem, exampleShape, inputShape, inputTri)
         warpedStack.append(warped)
     return warpedStack
 
-jose = skio.imread('jose.jpg')
-george = skio.imread('george.jpg')
-gStackJose, gStackGeorge = getGaussianStacks(jose, george)
-lStackJose, lStackGeorge = getLaplacianStacks(gStackJose, gStackGeorge, jose, george)
-getLocalEnergyStack(gStackJose, lStackJose)
-georgeEStack = getLocalEnergyStack(gStackGeorge, lStackGeorge)
-inputShape, inputTriangulation = getFacialLandmarks(jose)
-exampleShape, exampleTriangulation = getFacialLandmarks(george)
-print('hello')
-warpedStack = warpEnergyStack(jose, georgeEStack, inputShape, inputTriangulation, exampleShape, exampleTriangulation)
+jose = read('jose.jpg')
+george = read('george.jpg')
+jose_gray = readGrayScale('jose.jpg')
+george_gray = readGrayScale('george.jpg')
+
+inputShape, inputTri = getFacialLandmarks(jose)
+exampleShape, exampleTri = getFacialLandmarks(george)
+morph_example = warp(george_gray, exampleShape, inputShape, inputTri)
+
+
+stack_depth = 6
+gStackJose, gStackGeorge = getGaussianStacks(jose_gray, george_gray, stack_depth)
+lStackJose, lStackGeorge = getLaplacianStacks(gStackJose, gStackGeorge, jose_gray, george_gray)
+jose_residual = getResidual(jose_gray, stack_depth)
+george_residual = getResidual(george_gray, stack_depth)
+
+joseEStack = getLocalEnergyStack(lStackJose)
+georgeEStack = getLocalEnergyStack(lStackGeorge)
+
+warpedStack = warpEnergyStack(jose_gray, georgeEStack, inputShape, inputTri, exampleShape, exampleTri)
+showTri(morph_example, inputShape, inputTri)
+showTri(jose, inputShape, inputTri)
+showTri(george, exampleShape, exampleTri)
 for im in warpedStack:
     showImage(im)
-
-
-

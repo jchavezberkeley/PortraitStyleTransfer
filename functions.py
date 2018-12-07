@@ -3,10 +3,8 @@ import matplotlib.pyplot as plt
 import skimage as sk
 import skimage.io as skio
 import cv2
-import skimage as sk
 import skimage.filters
 import scipy.misc
-import skimage.io as skio
 import skimage.color
 import scipy.sparse
 import scipy.ndimage.interpolation
@@ -21,8 +19,15 @@ def readGrayScale(path):
     image = sk.img_as_float(image)
     return sk.color.rgb2gray(image)
 
+def read(path):
+    return skio.imread(path)
 
 #Reads an image with given path as array of color channels
+def readColor(path):
+    image = skio.imread(path)
+    image_full = sk.img_as_float(image)
+    return image_full
+
 def readColors(path):
     image = skio.imread(path)
     image_full = sk.img_as_float(image)
@@ -41,6 +46,9 @@ def showImage(image):
     skio.imshow(image)
     skio.show()
 
+def pltShow(image):
+    plt.imshow(image)
+    plt.show()
 
 #Saves image to given path
 def saveImage(path, image):
@@ -64,9 +72,16 @@ def homo_to_points(homo_matrix):
     values = homo_matrix[:2]
     print(values.transpose())
 
+def np_clip(img):
+    return np.clip(img, 0, 1)
+
 #Rescaels image between 0 and 1
 def rescale(img):
     return (img - img.min()) / (img.max() - img.min())
+
+
+def L2Norm(image):
+    np.linalg.norm(image)
 
 
 """
@@ -97,12 +112,12 @@ def interpFunc(xs, ys, image):
 def lowPass(image, size, sigma):
     kernel = cv2.getGaussianKernel(size, sigma)
     kernel = np.multiply(kernel, kernel.transpose())
-    return np.clip(cv2.filter2D(image, -1, kernel), 0, 255)
+    return cv2.filter2D(image, -1, kernel)
 
 #Gaussian stack of IMAGE, with DIM_FACTOR the size of the Gaussian kernel
 def GaussianStack(image, dim_factor, sigma, stack_depth):
     stack = []
-    for i in range(stack_depth):
+    for i in range(stack_depth + 1):
         image = lowPass(image, dim_factor, sigma)
         sigma *= 2
         stack.append(image)
@@ -111,17 +126,50 @@ def GaussianStack(image, dim_factor, sigma, stack_depth):
 #Laplacian stack given a Gaussian stack
 def LaplacianStack(image, stack):
     lap_stack = []
-    lap_stack.append(image - stack[0])
+    lap_stack.append(rescale(image - stack[0]))
     for i in range(1, len(stack) - 1):
         lap = stack[i] - stack[i+1]
         lap = rescale(lap)
         lap_stack.append(lap)
-    last_level = stack[len(stack) - 1]
-    last_kernel = lowPass(image, 45, len(stack) ** 2)  
-    last_level = last_level - last_kernel
-    last_level = rescale(last_level)
-    lap_stack.append(last_level)
     return lap_stack
+
+def warp(image, source_points, target_points, tri):
+    imh, imw = image.shape
+    out_image = np.zeros((imh, imw))
+    xs = np.arange(imw)
+    ys = np.arange(imh)
+    interpFN = interpFunc(xs, ys, image)
+
+    for triangle_indices in tri.simplices:
+
+        source_triangle = source_points[triangle_indices]
+        target_triangle = target_points[triangle_indices]
+        A = computeAffine(source_triangle, target_triangle)
+        A_inverse = np.linalg.inv(A)
+
+        tri_rows = target_triangle.transpose()[1]
+        tri_cols = target_triangle.transpose()[0]
+
+        row_coordinates, col_coordinates = polygon(tri_rows, tri_cols)
+
+        for x, y in zip(col_coordinates, row_coordinates):
+            #point inside target triangle mesh
+            point_in_target = np.array((x, y, 1))
+
+            #point inside source image
+            point_on_source = np.dot(A_inverse, point_in_target)
+
+            x_source = point_on_source[0]
+            y_source = point_on_source[1]
+
+            source_value = interpFN(x_source, y_source)
+            try:
+                out_image[y, x] = source_value
+            except IndexError:
+                continue
+
+    return out_image
+
 
 def getInvWarpMat(triangleIndices, srcKeypoints, avgKeypoints):
     # Initialize arrays for holding x and y indices of triangle vertices
@@ -165,7 +213,7 @@ def getInvWarpMat(triangleIndices, srcKeypoints, avgKeypoints):
 
 def morph(imgA, imgB, srcKeypoints, targetKeypoints, warp_frac, dissolve_frac, IS_GRAY=False):
     midway = np.zeros(imgB.shape)
-    
+
     avgKeypoints = []
     for i in range(len(srcKeypoints)):
         avg_x = srcKeypoints[i][0]*(1 - warp_frac) + targetKeypoints[i][0] * warp_frac
@@ -173,7 +221,7 @@ def morph(imgA, imgB, srcKeypoints, targetKeypoints, warp_frac, dissolve_frac, I
         avgPt = (avg_x, avg_y)
         avgKeypoints.append(avgPt)
     avgKeypoints = np.array(avgKeypoints)
-    
+
     midTriangulation = scipy.spatial.Delaunay(avgKeypoints)
 
     height = np.arange(len(imgA))
