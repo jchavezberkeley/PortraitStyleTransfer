@@ -140,13 +140,15 @@ def LaplacianStack(image, stack):
         lap_stack.append(lap)
     return lap_stack
 
-
+"""
+This functions works to redefine low passing, only this time with a mask.
+"""
 def lowPassMask(image, size, sigma, mask):
     mask_G = lowPass(mask, size, sigma)
     output = lowPass(image*mask, size, sigma)
-    showImage(output)
+    #showImage(output)
     output = rescale(output / mask_G)
-    showImage(output)
+    #showImage(output)
     return output
 """
 This method is based specifically on the matlab version of the paper.

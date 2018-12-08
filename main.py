@@ -67,6 +67,7 @@ def getResidualStack(img, imgStack):
         residualStack.append(cv2.convolve(img, g))
     return residualStack
 
+#
 def getResidual(image, mask, stack_depth):
     return lowPass(image, 5*(2**stack_depth), 2**stack_depth)
 
@@ -88,6 +89,7 @@ def warpEnergyStack(eStack, inputShape, inputTri, exampleShape):
         warpedStack.append(warped)
     return warpedStack
 
+#Alternate approach of warping the Laplacian stacks before estimating energy
 def warpLapStack(lStack, exampleShape, inputShape, inputTri):
     warpedLapStack = []
     for elem in lStack:
@@ -95,6 +97,7 @@ def warpLapStack(lStack, exampleShape, inputShape, inputTri):
         warpedLapStack.append(warped)
     return warpedLapStack
 
+#Performs Robust transfer and gain clamping
 def robustTransfer(inputLapStack, warpedStack, inputEStack):
     newGainStack = []
     e_0 = 0.01 ** 2
@@ -104,56 +107,69 @@ def robustTransfer(inputLapStack, warpedStack, inputEStack):
         gain = (warpedStack[i] / (inputEStack[i] + e_0)) ** 0.5
         gain[gain > gain_max] = gain_max
         gain[gain < gain_min] = gain_min
-        showImage(gain)
         newLayer = inputLapStack[i] * gain
         newGainStack.append(newLayer)
     return newGainStack
 
 #This is based more off of the matlab code
-def styleTransfer(input, example, input_gray, example_gray):
+def styleTransfer(input, example, input_channel, example_channel):
     #Getting masks around the regions of interest
     input_mask = readGrayScale('jose_mask.jpg')
     example_mask = readGrayScale('george_mask.jpg')
-    showImage(input_mask)
-    showImage(example_mask)
     inputShape, inputTri = getFacialLandmarks(input)
     exampleShape, exampleTri = getFacialLandmarks(example)
 
     stack_depth = 6
+
     #The implementation given for the paper doesn't really use the Gaussian stack
     #gStackInput, gStackExample = getGaussianStacks(input_gray, example_gray, stack_depth)
     #lStackInput, lStackExample = getLaplacianStacks(gStackInput, gStackExample, input_gray, example_gray)
-    lStackInput, lStackExample = getLaplacianStacks(input_gray, example_gray, input_mask, example_mask, stack_depth)
+    
+    lStackInput, lStackExample = getLaplacianStacks(input_channel, example_channel, input_mask, example_mask, stack_depth)
 
-    input_residual = getResidual(input_gray, input_mask, stack_depth)
-    example_residual = getResidual(example_gray, example_mask, stack_depth)
+    input_residual = getResidual(input_channel, input_mask, stack_depth)
+    example_residual = getResidual(example_channel, example_mask, stack_depth)
 
+    #Warps the Laplacian stack for example image
     #exampleWarpedLap = warpLapStack(lStackExample, exampleShape, inputShape, inputTri)
-    #for w in exampleWarpedLap:
-        #showImage(w)
 
     inputEStack = getLocalEnergyStack(lStackInput)
     exampleEStack = getLocalEnergyStack(lStackExample)
+
+    #This line finds the energy maps of the warped Laplacian stack
     #exampleEStackWarped = getLocalEnergyStack(exampleWarpedLap)
 
     warpedStack = warpEnergyStack(exampleEStack, inputShape, inputTri, exampleShape)
 
+    #This line applies to the alternate approac of warping Laplacians first
     #gainStack = robustTransfer(lStackInput, exampleEStackWarped, inputEStack)
     gainStack = robustTransfer(lStackInput, warpedStack, inputEStack)
 
     warpedEResidual = warp(example_residual, exampleShape, inputShape, inputTri)
-    
+
+
+    #This line could be the problem? In the paper it says trasfer the input residual
+    #but is also says transfer the example residual
+    #gainstack.append(input_residual)
+
     gainStack.append(warpedEResidual)
-    output_test = sumStack(gainStack)
-    showImage(output_test)
-    saveImage('./test_energy_first.jpg', output_test)
+    output = sumStack(gainStack)
+    return output
 
 
 
 
 input = read('jose.jpg')
 example = read('george.jpg')
+input_colors = readColors('jose.jpg')
+example_colors = readColors('george.jpg')
 input_gray = readGrayScale('jose.jpg')
 example_gray = readGrayScale('george.jpg')
 
-styleTransfer(input, example, input_gray, example_gray)
+red = styleTransfer(input, example, input_colors[0], example_colors[0])
+green = styleTransfer(input, example, input_colors[1], example_colors[1])
+blue = styleTransfer(input, example, input_colors[2], example_colors[2])
+
+output = np.dstack([red, green, blue])
+showImage(output)
+saveImage('./output_color.jpg', output)
