@@ -67,7 +67,7 @@ def getResidualStack(img, imgStack):
         residualStack.append(cv2.convolve(img, g))
     return residualStack
 
-#
+
 def getResidual(image, mask, stack_depth):
     return lowPass(image, 5*(2**stack_depth), 2**stack_depth)
 
@@ -76,7 +76,7 @@ def getLocalEnergyStack(lStack):
     for i in range(len(lStack)):
         laplacian = lStack[i]
         laplacian_squared = np.square(laplacian)
-        energy = lowPass(laplacian_squared, 45, 2 ** (i+1))
+        energy = lowPass(laplacian_squared, 5*(2**(i+1)), 2**(i+1))
         energyStack.append(energy)
     return energyStack
 
@@ -124,7 +124,7 @@ def styleTransfer(input, example, input_channel, example_channel):
     #The implementation given for the paper doesn't really use the Gaussian stack
     #gStackInput, gStackExample = getGaussianStacks(input_gray, example_gray, stack_depth)
     #lStackInput, lStackExample = getLaplacianStacks(gStackInput, gStackExample, input_gray, example_gray)
-    
+
     lStackInput, lStackExample = getLaplacianStacks(input_channel, example_channel, input_mask, example_mask, stack_depth)
 
     input_residual = getResidual(input_channel, input_mask, stack_depth)
@@ -144,20 +144,12 @@ def styleTransfer(input, example, input_channel, example_channel):
     #This line applies to the alternate approac of warping Laplacians first
     #gainStack = robustTransfer(lStackInput, exampleEStackWarped, inputEStack)
     gainStack = robustTransfer(lStackInput, warpedStack, inputEStack)
-
     warpedEResidual = warp(example_residual, exampleShape, inputShape, inputTri)
 
 
-    #This line could be the problem? In the paper it says trasfer the input residual
-    #but is also says transfer the example residual
-    #gainstack.append(input_residual)
-
     gainStack.append(warpedEResidual)
     output = sumStack(gainStack)
-    return output
-
-
-
+    return rescale(output)
 
 input = read('jose.jpg')
 example = read('george.jpg')
@@ -172,4 +164,4 @@ blue = styleTransfer(input, example, input_colors[2], example_colors[2])
 
 output = np.dstack([red, green, blue])
 showImage(output)
-saveImage('./output_color.jpg', output)
+saveImage('./output_color_test.jpg', output)
