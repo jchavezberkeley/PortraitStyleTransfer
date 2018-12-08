@@ -110,13 +110,9 @@ def interp(fraction, item1, item2):
 def interpFunc(xs, ys, image):
     return interp2d(xs, ys, image)
 
-def getKernel(size, sigma):
-    return cv2.getGaussianKernel(size, sigma)
-
 #Low pass of a given IMAGE with kernel SIZE and SIGMA
 def lowPass(image, size, sigma):
-    #kernel = cv2.getGaussianKernel(size, sigma)
-    kernel = getKernel(size, sigma)
+    kernel = cv2.getGaussianKernel(size, sigma)
     kernel = np.multiply(kernel, kernel.transpose())
     return cv2.filter2D(image, -1, kernel)
 
@@ -166,7 +162,7 @@ def LaplacianStackAlt(image, mask, stack_depth):
         stack.append(lowPass(image, sigma*5, sigma))
 
     for i in range(len(stack)-1):
-        stack[i] = rescale((stack[i] - stack[i+1]))
+        stack[i] = rescale((stack[i] - stack[i+1])*mask)
     return stack
 
 #Aggregates all images in STACK

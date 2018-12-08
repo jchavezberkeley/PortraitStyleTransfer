@@ -67,7 +67,6 @@ def getResidualStack(img, imgStack):
         residualStack.append(cv2.convolve(img, g))
     return residualStack
 
-
 def getResidual(image, mask, stack_depth):
     return lowPass(image, 5*(2**stack_depth), 2**stack_depth)
 
@@ -116,8 +115,12 @@ def styleTransfer(input, example, input_channel, example_channel):
     #Getting masks around the regions of interest
     input_mask = readGrayScale('jose_mask.jpg')
     example_mask = readGrayScale('george_mask.jpg')
-    inputShape, inputTri = getFacialLandmarks(input)
-    exampleShape, exampleTri = getFacialLandmarks(example)
+    #inputShape, inputTri = getFacialLandmarks(input)
+    #exampleShape, exampleTri = getFacialLandmarks(example)
+    exampleShape = np.loadtxt('george_points.txt')
+    inputShape = np.loadtxt('jose_points.txt')
+    inputTri = scipy.spatial.Delaunay(inputShape)
+    exampleTri = scipy.spatial.Delaunay(exampleShape)
 
     stack_depth = 6
 
@@ -129,7 +132,6 @@ def styleTransfer(input, example, input_channel, example_channel):
 
     input_residual = getResidual(input_channel, input_mask, stack_depth)
     example_residual = getResidual(example_channel, example_mask, stack_depth)
-
     #Warps the Laplacian stack for example image
     #exampleWarpedLap = warpLapStack(lStackExample, exampleShape, inputShape, inputTri)
 
@@ -159,9 +161,10 @@ input_gray = readGrayScale('jose.jpg')
 example_gray = readGrayScale('george.jpg')
 
 red = styleTransfer(input, example, input_colors[0], example_colors[0])
+
 green = styleTransfer(input, example, input_colors[1], example_colors[1])
 blue = styleTransfer(input, example, input_colors[2], example_colors[2])
 
 output = np.dstack([red, green, blue])
 showImage(output)
-saveImage('./output_color_test.jpg', output)
+saveImage('./output_color_corners.jpg', output)
