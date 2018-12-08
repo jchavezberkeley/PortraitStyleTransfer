@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import skimage as sk
@@ -110,6 +111,15 @@ def robustTransfer(inputLapStack, warpedStack, inputEStack):
         newGainStack.append(newLayer)
     return newGainStack
 
+def configureBackground(image, mask, im2name):
+    mask = np.bitwise_or(np.roll(mask, 5, axis=1), mask)
+    mask = np.bitwise_or(np.roll(mask, -5, axis=1), mask)
+    mask = np.bitwise_or(np.roll(mask, 5, axis=0), mask)
+    mask = np.bitwise_or(np.roll(mask, -5, axis=0), mask)
+
+    background = cv2.inpaint(image, mask, 3, cv2.INPAINT_TELEA)
+    saveImage('./' + im2name + '_background.jpg', background)
+
 #This is based more off of the matlab code
 def styleTransfer(input, example, input_channel, example_channel):
     #Getting masks around the regions of interest
@@ -148,23 +158,41 @@ def styleTransfer(input, example, input_channel, example_channel):
     gainStack = robustTransfer(lStackInput, warpedStack, inputEStack)
     warpedEResidual = warp(example_residual, exampleShape, inputShape, inputTri)
 
-
     gainStack.append(warpedEResidual)
     output = sumStack(gainStack)
     return rescale(output)
 
-input = read('jose.jpg')
-example = read('george.jpg')
-input_colors = readColors('jose.jpg')
-example_colors = readColors('george.jpg')
-input_gray = readGrayScale('jose.jpg')
-example_gray = readGrayScale('george.jpg')
+imname = sys.argv[1]
+im2name = sys.argv[2]
+file_type = '.jpg'
+_mask = '_mask'
+_background = '_background'
+
+input = read(imname + file_type)
+example = read(im2name + file_type)
+input_colors = readColors(imname + file_type)
+example_colors = readColors(im2name + file_type)
+input_gray = readGrayScale(imname + file_type)
+example_gray = readGrayScale(im2name + file_type)
+input_mask_gray = readGrayScale(imname + _mask + file_type)
+example_mask_gray = readGrayScale(im2name + _mask + file_type)
+input_mask = cv2.imread(imname + _mask + file_type, 0)
+example_mask = cv2.imread(im2name + _mask + file_type, 0)
+
+configureBackground(example, example_mask, im2name)
+
+background_colors = readColors(im2name + _background + file_type)
+background_red = background_colors[0]
+background_green = background_colors[1]
+background_blue = background_colors[2]
 
 red = styleTransfer(input, example, input_colors[0], example_colors[0])
-
 green = styleTransfer(input, example, input_colors[1], example_colors[1])
 blue = styleTransfer(input, example, input_colors[2], example_colors[2])
 
+red = (background_red * (1-input_mask_gray)) + (red * input_mask_gray)
+green = (background_green * (1-input_mask_gray)) + (green * input_mask_gray)
+blue = (background_blue * (1-input_mask_gray)) + (blue * input_mask_gray)
 output = np.dstack([red, green, blue])
 showImage(output)
-saveImage('./output_color_corners.jpg', output)
+saveImage('./output_full_color.jpg', output)
