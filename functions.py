@@ -56,11 +56,13 @@ def saveImage(path, image):
 
 
 #Shows a Delaunay triagulation over an image
-def showTri(image, points, tri):
+def showTri(image, points, tri, name):
+    figure = plt.figure()
     plt.triplot(points[:,0], points[:,1], tri.simplices)
     plt.plot(points[:,0], points[:,1], 'o')
     plt.imshow(image)
     plt.show()
+    figure.savefig(name)
 
 #Return homogenous matrix containing points
 def homogenous(points):

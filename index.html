@@ -12,15 +12,87 @@
       font-size: 20px;
     }
   </style>
-<title>Jose Chavez |  CS194-26</title>
+<title>Jose Chavez|  CS194-26</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
 </head>
 <body>
   <h1 align="middle">Final Project: Style Transfer for Portraits</h1>
   <h2 align="middle">Jose Chavez and Daniel Li</h2>
-  <h2 align="middle">cs194-26-adu, cs194-26-***</h2>
+  <h2 align="middle">cs194-26-adu, cs194-26-ace</h2>
   <div class="padded">
-    <p>For our final project we take the paper "Style Transfer for Headshot Portraits" by Shih, Paris, Barnes, Freeman, and Durand, and implement it ourselves in Python3. A lot of the techniques used in the paper, such as Laplacian stacks, image warping, and matching, have been learned in this class. We then take our best implementation of the paper and experiment with its results on our different lighting scenarios.</p>
+    <h2 align ="middle"> Overview</h2>
+    <p>For our final project we take the paper "Style Transfer for Headshot Portraits" by Shih, Paris, Barnes, Freeman, and Durand, 
+      and implement it ourselves in Python3. A lot of the techniques used in the paper, such as Laplacian stacks, image warping, and matching, 
+      have been learned in this class and used previously, albeit slightly differently. We then take our best implementation of the paper and experiment
+      with its results on our different lighting scenarios. Below, you can find our results in multiple different scenarios.</p>
+    <p>The goal of this project is to take two photos and transfer one headshot photo into the style of another headshot photo. To do this, we 
+      warp the stylized portrait into the shape of the other photo, compute the local energy maps, and transfer the local statistics of the portrait into the unstylized photo.
+    </p>
+
+    <h2 align="middle">Dense Correspondences</h2>
+    <p>The first step in our process is to compute dense correspondences. Previously, we manually annotated photos to have very exact correspondences, but in this approach,
+    we first attempt to use automatic software. We attempted to use automatic face matching that can be found <a href="https://www.pyimagesearch.com/2017/04/03/facial-landmarks-dlib-opencv-python/" target="_blank">
+      here</a>. However, this matches only the part of the face below the forehead and within the ears, so this approach led to some problems, which will be displayed below. Since
+      the triangulations were not as exact as in manual correspondences, we resort to manual correspondences for our best results. From these triangulations, we compute affine transforms 
+      and warp one image into the shape of the other. Below is an example of our triangulations, which we use to warp one image into the shape of another. </p>
+      <center>
+          <p> Jose & George </p>
+          <img src="joseTri.jpg" height="300">
+          <img src="georgeTri.jpg" height="300">>          
+      </center>
+
+    <h2 align="middle">Transfer Local Contrast</h3>
+    <p>To transfer the local contrast, we utilized Gaussian and Laplacian stacks. First, we decompose both images into Laplacian stacks, 
+      where each level is defined by the equation: </p>
+      <center>
+          <img src="LaplacianEq.png" height="75">
+          <p>The input to our Gaussian is sigma, and the x is a convolution operator.</p>
+      </center>
+    <p>We also extract the residual given a stack depth n, defined as </p>
+      <center>
+          <img src="Residual.png" height="50">
+      </center>
+      <p>From there, we compute the local energy as follows: </p>
+      <center>
+          <img src="LocalEnergy.png" height="30">
+      </center>
+      <p>We then warp every level of our portrait energy stack to the shape of our input image, through the triangulation defined in the above section. </p>
+
+      <p>At this point, we have energy stacks for both of our images, one for the original image, and one for the portrait warped into the shape of the original.
+        To transfer the energy over, we compute our output as follows, where O is our output image and S_tilde is our warped example portrait, and epsilon is a small
+        number to avoid division by 0:
+      </p>
+      <center>
+          <img src="Gain.png" height="100">
+          <p>The square root compensates for the square used to define for the energy.</p>
+      </center>
+      
+      <p>We also clamp the gain at a maximum of 2.8 and a minimum of .9 to have robust gain maps. Our stacks span 6 levels.
+        To get our final output image, we warp our example residual into the shape of our original photo and sum up our stack with this warped residual image.
+      </p>
+
+      <p>Below, we have the results for morphing Jose's face into the style of Clooney's. Here, we have original Jose, original George, and transferred Jose.</p>
+      <center>
+          <img src="jose.jpg" height="300">
+          <img src="george.jpg" height="300">
+          <img src="results/output_full_color.jpg" height="300">
+
+          
+      </center>
+
+    <h2 align="middle">Deviations</h2>
+    <p>While their implementation did not specify how they defined correspondences, we chose to do this by using manually selected points for reasons specified above.</p>
+
+    <p>While their implementation also used masks for the respective faces, we found that not using masks gave us better results than using binary masks for faces. Below,
+      we have our results with a binary face mask and without.
+    </p> 
+    <center>
+        <img src="results/output_color_test_points.jpg" height="300">
+        <img src="results/output_full_color.jpg" height="300">
+    </center>
+
   </div>
+
+  
 </body>
