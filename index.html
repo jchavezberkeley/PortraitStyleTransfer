@@ -82,7 +82,14 @@
       </center>
 
     <h2 align="middle">Deviations</h2>
-    <p>While their implementation did not specify how they defined correspondences, we chose to do this by using manually selected points for reasons specified above.</p>
+    <p>While their implementation did not specify how they defined correspondences, we chose to do this by using manually selected points for reasons specified above. 
+      Using an automatic correspondence finder, we found that it did not match the face from above the forehead and outside the ears, so the warped face went beyond
+      our original face, resulting in odd blurs. Below are the comparisons.
+    </p>
+    <center>
+        <img src="results/output_color_test.jpg" height="300">
+        <img src="results/output_full_color.jpg" height="300">
+    </center>
 
     <p>While their implementation also used masks for the respective faces, we found that not using masks gave us better results than using binary masks for faces. Below,
       we have our results with a binary face mask and without.
