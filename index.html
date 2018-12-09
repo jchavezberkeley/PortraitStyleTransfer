@@ -67,12 +67,31 @@
           <img src="Gain.png" height="100">
           <p>The square root compensates for the square used to define for the energy.</p>
       </center>
+
+      <p>Here, we have some levels of our energy stack images.</p>
+      <center>
+        <p>Energy stack images for Original Jose picture</p>
+          <img src="energyStacks/jose_stack0.jpg" height="300">
+          <img src="energyStacks/jose_stack1.jpg" height="300">
+          <img src="energyStacks/jose_stack2.jpg" height="300">
+          <img src="energyStacks/jose_stack3.jpg" height="300">
+          <img src="energyStacks/jose_stack4.jpg" height="300">
+        <p>Energy stack images for Clooney picture</p>
+        <img src="energyStacks/george_stack0.jpg" height="300">
+          <img src="energyStacks/george_stack1.jpg" height="300">
+          <img src="energyStacks/george_stack2.jpg" height="300">
+          <img src="energyStacks/george_stack3.jpg" height="300">
+          <img src="energyStacks/george_stack4.jpg" height="300">
+      </center>
       
       <p>We also clamp the gain at a maximum of 2.8 and a minimum of .9 to have robust gain maps. Our stacks span 6 levels.
         To get our final output image, we warp our example residual into the shape of our original photo and sum up our stack with this warped residual image.
       </p>
 
-      <p>Below, we have the results for morphing Jose's face into the style of Clooney's. Here, we have original Jose, original George, and transferred Jose.</p>
+      <p>Below, we have the results for morphing Jose's face into the style of Clooney's. Here, we have original Jose, original George, and transferred Jose. These results
+        look pretty good, as the lighting becomes balanced throughout Jose's face rather than bright on the right side only. The colors are not as bright as in Clooney's portrait,
+        but this can be attributed to Jose's image being much darker to start with, and our robust gain clamping the gain.
+      </p>
       <center>
           <img src="jose.jpg" height="300">
           <img src="george.jpg" height="300">
