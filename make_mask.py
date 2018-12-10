@@ -164,7 +164,7 @@ def save_mask(path):
 
     input_mask = np.clip(sk.img_as_float(input_mask), -1, 1)
 
-    skio.imsave("./" + name1 + "background_mask.jpg", input_mask)
+    skio.imsave("./" + name1 + "_mask.jpg", input_mask)
     return input_mask
 
 path = sys.argv[1]
