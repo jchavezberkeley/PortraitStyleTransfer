@@ -1,5 +1,5 @@
 # USAGE
-# python facial_landmarks.py --shape-predictor shape_predictor_68_face_landmarks.dat --image images/example_01.jpg 
+# python facial_landmarks.py --shape-predictor shape_predictor_68_face_landmarks.dat --image images/example_01.jpg
 
 # import the necessary packages
 from imutils import face_utils
@@ -52,7 +52,6 @@ for (i, rect) in enumerate(rects):
 	# and draw them on the image
 	for (x, y) in shape:
 		cv2.circle(image, (x, y), 1, (0, 0, 255), -1)
-	
 		print(x,y)
 
 # show the output image with the face detections + facial landmarks

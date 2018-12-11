@@ -54,9 +54,14 @@ def pltShow(image):
 def saveImage(path, image):
     skio.imsave(path, image)
 
+def showTri(image, points, tri):
+    plt.triplot(points[:,0], points[:,1], tri.simplices)
+    plt.plot(points[:,0], points[:,1], 'o')
+    plt.imshow(image)
+    plt.show()
 
 #Shows a Delaunay triagulation over an image
-def showTri(image, points, tri, name):
+def showTriSave(image, points, tri, name):
     figure = plt.figure()
     plt.triplot(points[:,0], points[:,1], tri.simplices)
     plt.plot(points[:,0], points[:,1], 'o')
@@ -164,6 +169,7 @@ def LaplacianStackAlt(image, mask, stack_depth):
         stack.append(lowPass(image, sigma*5, sigma))
 
     for i in range(len(stack)-1):
+        #stack[i] = rescale(stack[i] - stack[i+1])
         stack[i] = rescale((stack[i] - stack[i+1])*mask)
     return stack
 

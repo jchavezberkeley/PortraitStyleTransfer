@@ -20,105 +20,166 @@
   <h1 align="middle">Final Project: Style Transfer for Portraits</h1>
   <h2 align="middle">Jose Chavez and Daniel Li</h2>
   <h2 align="middle">cs194-26-adu, cs194-26-ace</h2>
+  <h2 align ="middle"> Overview</h2>
   <div class="padded">
-    <h2 align ="middle"> Overview</h2>
-    <p>For our final project we take the paper "Style Transfer for Headshot Portraits" by Shih, Paris, Barnes, Freeman, and Durand, 
-      and implement it ourselves in Python3. A lot of the techniques used in the paper, such as Laplacian stacks, image warping, and matching, 
+    <p>For our final project we take the paper "Style Transfer for Headshot Portraits" by Shih, Paris, Barnes, Freeman, and Durand,
+      and implement it ourselves in Python3. A lot of the techniques used in the paper, such as Laplacian stacks, image warping, and matching,
       have been learned in this class and used previously, albeit slightly differently. We then take our best implementation of the paper and experiment
       with its results on our different lighting scenarios. Below, you can find our results in multiple different scenarios.</p>
-    <p>The goal of this project is to take two photos and transfer one headshot photo into the style of another headshot photo. To do this, we 
+    <p>The goal of this project is to take two photos and transfer one headshot photo into the style of another headshot photo. To do this, we
       warp the stylized portrait into the shape of the other photo, compute the local energy maps, and transfer the local statistics of the portrait into the unstylized photo.
     </p>
-
-    <h2 align="middle">Dense Correspondences</h2>
-    <p>The first step in our process is to compute dense correspondences. Previously, we manually annotated photos to have very exact correspondences, but in this approach,
-    we first attempt to use automatic software. We attempted to use automatic face matching that can be found <a href="https://www.pyimagesearch.com/2017/04/03/facial-landmarks-dlib-opencv-python/" target="_blank">
-      here</a>. However, this matches only the part of the face below the forehead and within the ears, so this approach led to some problems, which will be displayed below. Since
-      the triangulations were not as exact as in manual correspondences, we resort to manual correspondences for our best results. From these triangulations, we compute affine transforms 
-      and warp one image into the shape of the other. Below is an example of our triangulations, which we use to warp one image into the shape of another. </p>
+  </div>
+  <h2 align="middle">Dense Correspondences</h2>
+  <div class="padded">
+    <p>The first step in our process is to compute dense correspondences. Previously, we manually annotated photos to have very exact correspondences, but in this approach, we first attempt to use automatic software. We attempted to use automatic face matching that can be found <a href="https://www.pyimagesearch.com/2017/04/03/facial-landmarks-dlib-opencv-python/" target="_blank">here</a>. However, this matches only the part of the face below the forehead and within the ears, so this approach led to some problems which will be displayed below. Since the triangulations were not as exact as in manual correspondences, we resorted to manual correspondences. From these triangulations, we compute affine transforms and warp one image into the shape of the other. Below is an example of our triangulations, which we use to warp one image into the shape of another. </p>
+    <div align="center">
+        <table style="width=100%">
+              <tr>
+                <td>
+                  <img src="./images/joseTri.jpg" width="500px" />
+                  <figcaption align="middle">Triangulation of Jose's face</figcaption>
+                </td>
+                <td>
+                  <img src="./images/georgeTri.jpg" width="500px" />
+                  <figcaption align="middle">Triangulation of George's face</figcaption>
+                </td>
+              <tr>
+        </table>
+    </div>
+  </div>
+  <h2 align="middle">Transfer Local Contrast</h2>
+  <div class="padded">
+    <p>We save our triangulations and points for future use. The next step, according to the paper, is to transfer the local contrast of the image. This local contrast is best seen in the lighting of the image. For example, in the George portrait, most of the light is towards the front of his face. The areas towards the ears and neck are darker.</p>
+    <p>To transfer the local contrast, we utilize Gaussian and Laplacian stacks. First, we decompose both images into Laplacian stacks,
+      where each level <i>l</i> is defined by this equation found in the paper: </p>
       <center>
-          <p> Jose & George </p>
-          <img src="joseTri.jpg" height="300">
-          <img src="georgeTri.jpg" height="300">>          
+          <img src="images/LaplacianEq.png" height="75">
+          <p>Here, <i>I</i> is our input image, which corresponds to the picture we want to transfer the style to. The input to the Gaussian is a sigma value, and the <i>x</i> is a convolution operator.</i></p>
       </center>
-
-    <h2 align="middle">Transfer Local Contrast</h3>
-    <p>To transfer the local contrast, we utilized Gaussian and Laplacian stacks. First, we decompose both images into Laplacian stacks, 
-      where each level is defined by the equation: </p>
+    <p>We also extract the residual given a stack depth <i>n</i>, defined as </p>
       <center>
-          <img src="LaplacianEq.png" height="75">
-          <p>The input to our Gaussian is sigma, and the x is a convolution operator.</p>
-      </center>
-    <p>We also extract the residual given a stack depth n, defined as </p>
-      <center>
-          <img src="Residual.png" height="50">
+          <img src="images/Residual.png" height="50">
       </center>
       <p>From there, we compute the local energy as follows: </p>
       <center>
-          <img src="LocalEnergy.png" height="30">
+          <img src="images/LocalEnergy.png" height="30">
       </center>
       <p>We then warp every level of our portrait energy stack to the shape of our input image, through the triangulation defined in the above section. </p>
 
       <p>At this point, we have energy stacks for both of our images, one for the original image, and one for the portrait warped into the shape of the original.
-        To transfer the energy over, we compute our output as follows, where O is our output image and S_tilde is our warped example portrait, and epsilon is a small
-        number to avoid division by 0:
+        To transfer the energy over, we compute our output as follows, where <i></i> is ouput image of the follow operation. <i>S_tilde</i> is our warped example portrait, and epsilon <i>e</i> is a small
+        number to avoid division by 0. In the paper, the recommended value for <i>e</i> was 0.0001:
       </p>
       <center>
-          <img src="Gain.png" height="100">
+          <img src="images/Gain.png" height="100">
           <p>The square root compensates for the square used to define for the energy.</p>
       </center>
 
       <p>Here, we have some levels of our energy stack images.</p>
       <center>
         <p>Energy stack images for Original Jose picture</p>
-          <img src="energyStacks/jose_stack0.jpg" height="300">
-          <img src="energyStacks/jose_stack1.jpg" height="300">
-          <img src="energyStacks/jose_stack2.jpg" height="300">
-          <img src="energyStacks/jose_stack3.jpg" height="300">
-          <img src="energyStacks/jose_stack4.jpg" height="300">
+          <img src="energyStacks/jose_stack0.jpg" height="350">
+          <img src="energyStacks/jose_stack1.jpg" height="350">
+          <img src="energyStacks/jose_stack2.jpg" height="350">
+          <img src="energyStacks/jose_stack3.jpg" height="350">
+          <img src="energyStacks/jose_stack4.jpg" height="350">
         <p>Energy stack images for Clooney picture</p>
-        <img src="energyStacks/george_stack0.jpg" height="300">
-          <img src="energyStacks/george_stack1.jpg" height="300">
-          <img src="energyStacks/george_stack2.jpg" height="300">
-          <img src="energyStacks/george_stack3.jpg" height="300">
-          <img src="energyStacks/george_stack4.jpg" height="300">
+        <img src="energyStacks/george_stack0.jpg" height="350">
+          <img src="energyStacks/george_stack1.jpg" height="350">
+          <img src="energyStacks/george_stack2.jpg" height="350">
+          <img src="energyStacks/george_stack3.jpg" height="350">
+          <img src="energyStacks/george_stack4.jpg" height="350">
       </center>
-      
-      <p>We also clamp the gain at a maximum of 2.8 and a minimum of .9 to have robust gain maps. Our stacks span 6 levels.
+
+      <p>Our stacks span 6 levels, the number of levels used in the paper. We will come back to experiment with the stack depth. Also in the paper, the gain maps are clamped to avoid outliers. We also clamp the gain at a maximum of 2.8 and a minimum of 0.9, the values used in the paper, to have robust gain maps.
         To get our final output image, we warp our example residual into the shape of our original photo and sum up our stack with this warped residual image.
       </p>
 
-      <p>Below, we have the results for morphing Jose's face into the style of Clooney's. Here, we have original Jose, original George, and transferred Jose. These results
-        look pretty good, as the lighting becomes balanced throughout Jose's face rather than bright on the right side only. The colors are not as bright as in Clooney's portrait,
+      <p>Below, we have the results for transfering the style of Clooney's portrait to the original portrait of Jose. Here, we have original Jose, original George, and transferred Jose. We liked these results, as the lighting becomes balanced throughout Jose's face rather than bright on the right side only. In fact, the algorithm transfer a lot of the lighting, focused towards the front of the face. You can see that Jose's forehead is brighter than in the original image. However, the colors are not as bright as in Clooney's portrait,
         but this can be attributed to Jose's image being much darker to start with, and our robust gain clamping the gain.
       </p>
       <center>
-          <img src="jose.jpg" height="300">
-          <img src="george.jpg" height="300">
-          <img src="results/output_full_color.jpg" height="300">
-
-          
+          <img src="images/jose.jpg" height="325">
+          <img src="images/george.jpg" height="325">
+          <img src="results/output_full_color.jpg" height="325">
       </center>
-
-    <h2 align="middle">Deviations</h2>
-    <p>While their implementation did not specify how they defined correspondences, we chose to do this by using manually selected points for reasons specified above. 
+    </div>
+  <h2 align="middle">Deviations</h2>
+  <div class="padded">
+    <h3 align="middle">Manual vs Automatic Correspondences</h3>
+    <p>While their implementation did not specify how they defined correspondences, we chose to do this by using manually selected points for reasons specified above.
       Using an automatic correspondence finder, we found that it did not match the face from above the forehead and outside the ears, so the warped face went beyond
       our original face, resulting in odd blurs. Below are the comparisons.
     </p>
     <center>
-        <img src="results/output_color_test.jpg" height="300">
-        <img src="results/output_full_color.jpg" height="300">
+        <img src="results/output_color_test.jpg" height="350">
+        <img src="results/output_full_color.jpg" height="350">
     </center>
-
-    <p>While their implementation also used masks for the respective faces, we found that not using masks gave us better results than using binary masks for faces. Below,
-      we have our results with a binary face mask and without.
-    </p> 
+    <h3 align="middle">Convolutions</h3>
+    <p>The paper had a specific definition for applying a Gaussian convolution to an image. The paper defined it as follows:</p>
     <center>
-        <img src="results/output_color_test_points.jpg" height="300">
-        <img src="results/output_full_color.jpg" height="300">
+        <img src="images/new_conv.png" height="100">
     </center>
-
+    <h3 align="middle">Masks</h3>
+    <p>In the paper, we found that using masks gave us different results than not using binary masks for faces. Below,
+      we have our results without a binary face mask and with a binary face mask, respectively. We noticed that not using a mask transfered more of the background/ambient color of the stylized portrat into the face. However, the image now appears too saturated compared to image that did use a mask.
+    </p>
+    <center>
+        <img src="results/output_nomask_test.jpg" height="350">
+        <img src="results/output_full_color.jpg" height="350">
+    </center>
   </div>
-
-  
+  <h2 align="middle">Black and White Portraits</h2>
+  <div class="padded">
+    <p>The paper demonstrated several example in which they successfully transfered the style from a black and white portrait to an input image, the final result being in black and white. We tested our algorithm with a portrait of Chris. We repeated the earlier process by finding the manual correspondence points and feeding both images through the algorithm above. Below are the results.</p>
+    <center>
+        <img src="images/jose.jpg" height="325">
+        <img src="images/chris.jpg" height="325">
+        <img src="results/jose_chris_nomask.jpg" height="325">
+        <p>The third image is the result of using NO mask.</p>
+    </center>
+    <p>From this result, we can see that our implementation was able to transfer the lighting contrasts. For example, in the portrait, the light is strong on the left side of the face, with a dark contrast on the right. In our output picture, the lighting on the left side of the face expanded to a region that matches the lighting found on Chris' left half. Specifically, light can be found on the forehead of the outputted Jose portrait, but not in the original Jose portrait.</p>
+    <p>However, our result doesn't have the dramatic contrast found in the Chris portrait. Likewise, in the output picture, it appears slightly darker around the chin and along the sides of the face. This, we believe, is because our implemenation managed to treat the facial hair of Chris as a dark spot in the lighting. This is why the upper lip and chin in the output picture appear darker than the light on the left eye. We found this to be an interesting result, as we didn't anticipate the effects of facial hair. These effect was not explained or adjusted for in the paper.</p>
+    <p>To address the lack of dramatic contrast, we experimented with the clamping values. The results will be displayed in a further section. Below are the results with a mask.</p>
+    <center>
+        <img src="images/jose.jpg" height="325">
+        <img src="images/chris.jpg" height="325">
+        <img src="results/jose_chris.jpg" height="325">
+        <p>The third image is the result of using a mask.</p>
+    </center>
+  </div>
+  <h2 align="middle">Experimental Results</h2>
+  <div class="padded">
+    <p>The main goal of implementing this paper was to experiement transfering portrait styles from non-studio lighting scenarios. That is, in the paper and so far for this project, we have looked at transfering styles from a very stylized portrait, likely taken in an indoor studio with fancy lighting equipment. We came up with a new question: can we transfer styles from an indoor setting to an outdoor portrait and vice versa? Essentially, we tested our style transfer with non-stylized portraits and focused on natural environments.</p>
+    <p>Below are two portraits in natural environments, one indoors and one outdoors respectively.</p>
+    <div align="center">
+        <table style="width=100%">
+              <tr>
+                <td>
+                  <img src="./images/jose_indoor_small.jpg" width="300px" />
+                  <figcaption align="middle">Indoor environment</figcaption>
+                </td>
+                <td>
+                  <img src="./images/jose_outdoor_small.jpg" width="300px" />
+                  <figcaption align="middle">Outdoor environment</figcaption>
+                </td>
+              <tr>
+        </table>
+    </div>
+    <p>We tested transfering the style of the outdoor portrait to the indoor portrait, replacing the background. Below are the results.</p>
+    <center>
+        <img src="images/jose_indoor_small.jpg" height="350">
+        <img src="images/jose_outdoor_small.jpg" height="350">
+        <img src="results/indoor_to_outdoor_small_mask.jpg" height="350">
+        <p>The third image is the result of using a mask.</p>
+    </center>
+    <center>
+        <img src="images/jose_indoor_small.jpg" height="350">
+        <img src="images/jose_outdoor_small.jpg" height="350">
+        <img src="results/indoor_to_outdoor_small.jpg" height="350">
+        <p>The third image is the result of using NO mask.</p>
+    </center>
+    <p>As before, our algorithm managed to transfer the very diffused lighting found outdoors to the face in the indoor picture. However, now our result look too washed out. We believe this is a result of our algorithm's clamping values and deviation from not blurring the mask in the laplacian stacks.</p>
+  </div>
 </body>
