@@ -169,8 +169,8 @@ def LaplacianStackAlt(image, mask, stack_depth):
         stack.append(lowPass(image, sigma*5, sigma))
 
     for i in range(len(stack)-1):
-        #stack[i] = rescale(stack[i] - stack[i+1])
-        stack[i] = rescale((stack[i] - stack[i+1])*mask)
+        stack[i] = rescale(stack[i] - stack[i+1])
+        #stack[i] = rescale((stack[i] - stack[i+1])*mask)
     return stack
 
 #Aggregates all images in STACK

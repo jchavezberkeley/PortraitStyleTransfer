@@ -32,7 +32,7 @@
   </div>
   <h2 align="middle">Dense Correspondences</h2>
   <div class="padded">
-    <p>The first step in our process is to compute dense correspondences. Previously, we manually annotated photos to have very exact correspondences, but in this approach, we first attempt to use automatic software. We attempted to use automatic face matching that can be found <a href="https://www.pyimagesearch.com/2017/04/03/facial-landmarks-dlib-opencv-python/" target="_blank">here</a>. However, this matches only the part of the face below the forehead and within the ears, so this approach led to some problems which will be displayed below. Since the triangulations were not as exact as in manual correspondences, we resorted to manual correspondences. From these triangulations, we compute affine transforms and warp one image into the shape of the other. Below is an example of our triangulations, which we use to warp one image into the shape of another. </p>
+    <p>The first step in our process is to compute dense correspondences. Previously, we manually annotated photos to have very exact correspondences, but in this approach, we first attempt to use automatic software. We attempted to use an automatic face matching program, using dlib and OpenCV, that can be found <a href="https://www.pyimagesearch.com/2017/04/03/facial-landmarks-dlib-opencv-python/" target="_blank">here</a>. However, this matches only the part of the face below the forehead and within the ears, so this approach led to some problems which will be displayed below. Since the triangulations were not as exact as in manual correspondences, we resorted to manual correspondences. From these triangulations, we compute affine transforms and warp one image into the shape of the other. Below is an example of our triangulations, which we use to warp one image into the shape of another. </p>
     <div align="center">
         <table style="width=100%">
               <tr>
@@ -135,7 +135,7 @@
     <p>We tried this definition but unfortunately we could get this to work. The values outputted by this definition were in a very incompatible range, and our attempts to make it a compatible [0, 1] range failed. Therefore, we continued with regular convolution operations.</p>
     <h3 align="middle">Masks</h3>
     <p>In the paper, we found that using masks gave us different results than not using binary masks for faces. Below,
-      we have our results without a binary face mask and with a binary face mask, respectively. We noticed that not using a mask transfered more of the background/ambient color of the stylized portrait into the face. However, the image now appears too saturated compared to image that did use a mask.
+      we have our results without a binary face mask and with a binary face mask, respectively. We noticed that not using a mask transfered more of the background/ambient color of the stylized portrait into the face. Not applying the mask to the Laplacian stacks allowed more of the color surrouding the head to be considered for transfer. However, the image now appears too saturated compared to image that did use a mask.
     </p>
     <center>
         <img src="results/output_nomask_test.jpg" height="350">
@@ -195,12 +195,19 @@
         <img src="results/output_nomask_3.0_1.1.jpg" height="325">
         <p>The image on the right has a <i>theta_h</i> = 3.0, <i>theta_l</i> = 1.1.</p>
     </center>
-    <p>To us, this was surprising. We expected the contrast to be better, since by increasing the min gain to be above 1 made us think that the lighting would be more dramatic. So since increasing the min gain didn't help, we tried decreasing the min gain back to 0.9. Below is the comparison.</p>
+    <p>To us, this was surprising. We expected the contrast to be better, since by increasing the min gain to be above 1 made us think that the lighting would be more dramatic. With the higher min and max gain values, a lot of the lighting transfer is gone. So since increasing the min gain didn't help, we tried decreasing the min gain back to 0.9. Below is the comparison.</p>
     <center>
         <img src="results/output_nomask_test.jpg" height="325">
         <img src="results/output_nomask_3.0_0.9.jpg" height="325">
-        <p>The image on the right has a <i>theta_h</i> = 3.0, <i>theta_l</i> = 0.9.</p>
+        <p>The image on the right has a <i>theta_h</i> = 1.7, <i>theta_l</i> = 0.5.</p>
     </center>
+    <p>Now we noticed no difference between the result with the higher max gain and the default max gain. After this, we decided to lower both numbers to 1.7 and 0.5:</p>
+    <center>
+        <img src="results/output_nomask_test.jpg" height="325">
+        <img src="results/output_nomask_1.7_0.5.jpg" height="325">
+        <p>The image on the right has a <i>theta_h</i> = 1.7, <i>theta_l</i> = 0.5.</p>
+    </center>
+    <p>Lowering both the min gain and the max gain made the output image significantly more washed out. This result confused us because it seemed to go again the intuition that the paper mentioned, in which we expected that the higher values would make the lighting more dramatic. In addition, when we lowered the values, the image color was completely washed out. We unfortunately weren't able to come up with an explanation for these results and didn't find any useful information on this in the paper. For the rest of the project, we kept the min and max gain values as the default ones from the paper.</p>
   </div>
   <h2 align="middle">Experimental Results</h2>
   <div class="padded">
@@ -264,7 +271,7 @@
         <img src="results/day_to_night_no_mask.jpg" height="350">
         <p>The third image is the result of using NO mask.</p>
     </center>
-    <p> In general, the outdoor to night lighting experiment has failed. One positive aspect is, in the result with no mask, the yellow highlight on the right side of the faces was transferred. But, our algorithm does not transfer color as well as local contrast.</p>
+    <p> In general, the outdoor to night lighting experiment failed. One positive aspect is, in the result with no mask, the yellow highlight on the right side of the faces was transferred. But, our algorithm does not transfer color as well as local contrast.</p>
     <h3 align="middle">Night to Day</h3>
     <p>Another combination is from night to daytime lighting.</p>
     <center>
@@ -278,6 +285,21 @@
         <img src="images/jose_outdoor_small.jpg" height="350">
         <img src="results/night_to_day_no_mask.jpg" height="350">
         <p>The third image is the result of using NO mask.</p>
+    </center>
+    <p>In general, a lot of our color could not be transfered like they were transfered in the paper. Taking into account implementation differences, we couldn't develop an explanation as to why we couldn't transfer color effectively. At this point, we thought that the differences in our implementation, such as the masked blurring, manual correspondence points, wouldn't affect the transfer of color. However, in the next section, we show the results of us using auto correspondence finding rather than manual.</p>
+  </div>
+  <h2 align="middle">Auto Finding Correspondences</h2>
+  <div class="padded">
+    <p>Our more promising result from the indoor outdoor experiments came from using the OpenCV/dlib program mentioned earlier that automatically found dense correspondence point on the face. Below is the comparison of the results of going from indoor to outdoor.</p>
+    <center>
+        <img src="results/indoor_to_outdoor_small_mask.jpg" height="325">
+        <img src="results/indoor_to_outdoor_auto.jpg" height="325">
+        <p>The image on the right was obtained using automatically found correspondence points by the OpenCV program and a mask</p>
+    </center>
+    <center>
+        <img src="results/indoor_to_outdoor_small.jpg" height="325">
+        <img src="results/indoor_to_outdoor_auto_no_mask.jpg" height="325">
+        <p>The image on the right was obtained using automatically found correspondence points by the OpenCV program and a mask</p>
     </center>
   </div>
 </body>

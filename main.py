@@ -121,8 +121,8 @@ def configureBackground(image, mask, im2name):
 
 #This is based more off of the matlab code
 def styleTransfer(input, example, input_mask, example_mask, inputShape, exampleShape, input_channel, example_channel):
-    #inputShape, inputTri = getFacialLandmarks(input)
-    #exampleShape, exampleTri = getFacialLandmarks(example)
+    inputShape, inputTri = getFacialLandmarks(input)
+    exampleShape, exampleTri = getFacialLandmarks(example)
     inputTri = scipy.spatial.Delaunay(inputShape)
     exampleTri = scipy.spatial.Delaunay(exampleShape)
 
