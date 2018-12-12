@@ -51,22 +51,25 @@
   <h2 align="middle">Transfer Local Contrast</h2>
   <div class="padded">
     <p>We save our triangulations and points for future use. The next step, according to the paper, is to transfer the local contrast of the image. This local contrast is best seen in the lighting of the image. For example, in the George portrait, most of the light is towards the front of his face. The areas towards the ears and neck are darker.</p>
+    <h3 align="middle">Gaussian and Laplacian Stacks</h3>
     <p>To transfer the local contrast, we utilize Gaussian and Laplacian stacks. First, we decompose both images into Laplacian stacks,
       where each level <i>l</i> is defined by this equation found in the paper: </p>
       <center>
-          <img src="images/LaplacianEq.png" height="75">
+          <img src="images/LaplacianEq.png" height="80">
           <p>Here, <i>I</i> is our input image, which corresponds to the picture we want to transfer the style to. The input to the Gaussian is a sigma value, and the <i>x</i> is a convolution operator.</i></p>
       </center>
+      <h3 align="middle">Residual</h3>
     <p>We also extract the residual given a stack depth <i>n</i>, defined as </p>
       <center>
           <img src="images/Residual.png" height="50">
       </center>
+      <h3 align="middle">Energy Maps</h3>
       <p>From there, we compute the local energy as follows: </p>
       <center>
           <img src="images/LocalEnergy.png" height="30">
       </center>
       <p>We then warp every level of our portrait energy stack to the shape of our input image, through the triangulation defined in the above section. </p>
-
+      <h3 align="middle">Gain Maps</h3>
       <p>At this point, we have energy stacks for both of our images, one for the original image, and one for the portrait warped into the shape of the original.
         To transfer the energy over, we compute our output as follows, where <i></i> is ouput image of the follow operation. <i>S_tilde</i> is our warped example portrait, and epsilon <i>e</i> is a small
         number to avoid division by 0. In the paper, the recommended value for <i>e</i> was 0.0001:
@@ -95,7 +98,15 @@
       <p>Our stacks span 6 levels, the number of levels used in the paper. We will come back to experiment with the stack depth. Also in the paper, the gain maps are clamped to avoid outliers. We also clamp the gain at a maximum of 2.8 and a minimum of 0.9, the values used in the paper, to have robust gain maps.
         To get our final output image, we warp our example residual into the shape of our original photo and sum up our stack with this warped residual image.
       </p>
-
+      <h3 align="middle">Background</h3>
+      <p>In the paper, the background was directly replaced. In the case that the head size didn't correspond, in which spaces need to be filled with the background, we used the OpenCV method <i>inpaint</i>. What <i>inpaint</i> allowed us to do was to fill in an area equal to the size of the head in the stylized photo, then use that entire image as the background. We first make a mask of the stylized portrait head, feed the result of removing that area from the whole image into <i>inpaint</i>. The following are the results.</p>
+      <center>
+          <img src="images/george.jpg" height="325">
+          <img src="images/george_mask.jpg" height="325">
+          <img src="results/george_background.jpg" height="325">
+      </center>
+      <p>Weird artifacts are due to inaccuracies with the mask.</p>
+      <h3 align="middle">Results</h3>
       <p>Below, we have the results for transfering the style of Clooney's portrait to the original portrait of Jose. Here, we have original Jose, original George, and transferred Jose. We liked these results, as the lighting becomes balanced throughout Jose's face rather than bright on the right side only. In fact, the algorithm transfer a lot of the lighting, focused towards the front of the face. You can see that Jose's forehead is brighter than in the original image. However, the colors are not as bright as in Clooney's portrait,
         but this can be attributed to Jose's image being much darker to start with, and our robust gain clamping the gain.
       </p>
@@ -119,11 +130,12 @@
     <h3 align="middle">Convolutions</h3>
     <p>The paper had a specific definition for applying a Gaussian convolution to an image. The paper defined it as follows:</p>
     <center>
-        <img src="images/new_conv.png" height="100">
+        <img src="images/new_conv.png" height="90">
     </center>
+    <p>We tried this definition but unfortunately we could get this to work. The values outputted by this definition were in a very incompatible range, and our attempts to make it a compatible [0, 1] range failed. Therefore, we continued with regular convolution operations.</p>
     <h3 align="middle">Masks</h3>
     <p>In the paper, we found that using masks gave us different results than not using binary masks for faces. Below,
-      we have our results without a binary face mask and with a binary face mask, respectively. We noticed that not using a mask transfered more of the background/ambient color of the stylized portrat into the face. However, the image now appears too saturated compared to image that did use a mask.
+      we have our results without a binary face mask and with a binary face mask, respectively. We noticed that not using a mask transfered more of the background/ambient color of the stylized portrait into the face. However, the image now appears too saturated compared to image that did use a mask.
     </p>
     <center>
         <img src="results/output_nomask_test.jpg" height="350">
@@ -132,7 +144,7 @@
   </div>
   <h2 align="middle">Black and White Portraits</h2>
   <div class="padded">
-    <p>The paper demonstrated several example in which they successfully transfered the style from a black and white portrait to an input image, the final result being in black and white. We tested our algorithm with a portrait of Chris. We repeated the earlier process by finding the manual correspondence points and feeding both images through the algorithm above. Below are the results.</p>
+    <p>The paper demonstrated several examples in which they successfully transfered the style from a black and white portrait to an input image, the final result being in black and white. We tested our algorithm with a portrait of Chris Hemsworth. We repeated the earlier process by finding the manual correspondence points and feeding both images through the algorithm above. Below are the results.</p>
     <center>
         <img src="images/jose.jpg" height="325">
         <img src="images/chris.jpg" height="325">
@@ -140,7 +152,7 @@
         <p>The third image is the result of using NO mask.</p>
     </center>
     <p>From this result, we can see that our implementation was able to transfer the lighting contrasts. For example, in the portrait, the light is strong on the left side of the face, with a dark contrast on the right. In our output picture, the lighting on the left side of the face expanded to a region that matches the lighting found on Chris' left half. Specifically, light can be found on the forehead of the outputted Jose portrait, but not in the original Jose portrait.</p>
-    <p>However, our result doesn't have the dramatic contrast found in the Chris portrait. Likewise, in the output picture, it appears slightly darker around the chin and along the sides of the face. This, we believe, is because our implemenation managed to treat the facial hair of Chris as a dark spot in the lighting. This is why the upper lip and chin in the output picture appear darker than the light on the left eye. We found this to be an interesting result, as we didn't anticipate the effects of facial hair. These effect was not explained or adjusted for in the paper.</p>
+    <p>However, our result doesn't have the dramatic contrast found in the Chris portrait. Likewise, in the output picture, it appears slightly darker around the chin and along the sides of the face. This, we believe, is because our implemenation managed to treat the facial hair of Chris as a dark spot in the lighting. This is why the upper lip and chin in the output picture appear darker than the light on the left eye. We found this to be an interesting result, as we didn't anticipate the effects of facial hair. This effect was not explained or adjusted for in the paper.</p>
     <p>To address the lack of dramatic contrast, we experimented with the clamping values. The results will be displayed in a further section. Below are the results with a mask.</p>
     <center>
         <img src="images/jose.jpg" height="325">
@@ -149,9 +161,50 @@
         <p>The third image is the result of using a mask.</p>
     </center>
   </div>
+  <h2 align="middle">Clamping</h2>
+  <div class="padded">
+    <h3 align="middle">Robust Gain and Convolution</h3>
+    <p>In this section, we dicuss our observation with clamping gain values. According to the paper, "gain values below 1 mean a decrease of local contrast, and conversely, values greater than 1 mean an incrase." The paper defines a robust gain map that clamps high and low values: </p>
+    <center>
+        <img src="images/RobustGain.png" height="50">
+        <p>The paper defines <i>theta_h</i> = 2.8, <i>theta_l</i> = 0.9, <i>Beta</i> = 3</p>
+    </center>
+    <p>Values were clamped to avoid "phantom" effects. The clamping was done very fast by vectorizing our code.</p>
+    <center>
+        <img src="images/gain_clamp.png" height="70">
+    </center>
+    <p>Notice that there is a convolution with a Gaussian at the end of clamping. The results we have obtained so far didn't use this convolution operator. This is because, when looking up the Matlab implementation found the paper's website, the code's implementation actually didn't include this convolution. Thus, we didn't technically include this descision as a deviation. However, we ran some tests using this convolution operator.</p>
+    <p>Below is the result of including the convolution at the end of clamping.</p>
+    <center>
+        <img src="images/jose.jpg" height="325">
+        <img src="images/chris.jpg" height="325">
+        <img src="results/jose_chris_blurgain.jpg" height="325">
+        <p>The third image is the result of applying a Gaussian convolution at the end of clamping.</p>
+    </center>
+    <p>Comparing both pictures.</p>
+    <center>
+        <img src="results/jose_chris_nomask.jpg" height="325">
+        <img src="results/jose_chris_blurgain.jpg" height="325">
+        <p>The convolution at the end of clamping produced the right picture.</p>
+    </center>
+    <p>We found the convolution at the end of clamping to be less dramatic. For the rest of the results, we didn't include this final convolution operator.</p>
+    <h3 align="middle">Experimentation with Values</h3>
+    <p>Using the intuition mentioned earlier, we experimented adjusting these clamping values. For the Jose and George picture, we tried to increase the contrast of the light by increasing the min and max gain values. Below is the result of a min gain of 1.1 and a max gain of 3.0:</p>
+    <center>
+        <img src="results/output_nomask_test.jpg" height="325">
+        <img src="results/output_nomask_3.0_1.1.jpg" height="325">
+        <p>The image on the right has a <i>theta_h</i> = 3.0, <i>theta_l</i> = 1.1.</p>
+    </center>
+    <p>To us, this was surprising. We expected the contrast to be better, since by increasing the min gain to be above 1 made us think that the lighting would be more dramatic. So since increasing the min gain didn't help, we tried decreasing the min gain back to 0.9. Below is the comparison.</p>
+    <center>
+        <img src="results/output_nomask_test.jpg" height="325">
+        <img src="results/output_nomask_3.0_0.9.jpg" height="325">
+        <p>The image on the right has a <i>theta_h</i> = 3.0, <i>theta_l</i> = 0.9.</p>
+    </center>
+  </div>
   <h2 align="middle">Experimental Results</h2>
   <div class="padded">
-    <p>The main goal of implementing this paper was to experiement transfering portrait styles from non-studio lighting scenarios. That is, in the paper and so far for this project, we have looked at transfering styles from a very stylized portrait, likely taken in an indoor studio with fancy lighting equipment. We came up with a new question: can we transfer styles from an indoor setting to an outdoor portrait and vice versa? Essentially, we tested our style transfer with non-stylized portraits and focused on natural environments.</p>
+    <p>The main goal of implementing this paper was to experiement transfering portrait styles from non-studio lighting scenarios. That is, in the paper and so far for this project, we have looked at transfering styles from a very stylized portrait, likely taken in an indoor studio with fancy lighting equipment. We came up with a new question: can we transfer styles from an indoor setting to an outdoor portrait and vice versa? Essentially, we tested our style transfer with non-stylized portraits and focused on natural environments. We aim to show the results, then discuss what transfered well and what didn't transfer well.</p>
     <p>Below are two portraits in natural environments, one indoors and one outdoors respectively.</p>
     <div align="center">
         <table style="width=100%">
@@ -167,6 +220,7 @@
               <tr>
         </table>
     </div>
+    <h3 align="middle">Indoor to Outdoor</h3>
     <p>We tested transfering the style of the outdoor portrait to the indoor portrait, replacing the background. Below are the results.</p>
     <center>
         <img src="images/jose_indoor_small.jpg" height="350">
@@ -181,5 +235,49 @@
         <p>The third image is the result of using NO mask.</p>
     </center>
     <p>As before, our algorithm managed to transfer the very diffused lighting found outdoors to the face in the indoor picture. However, now our result look too washed out. We believe this is a result of our algorithm's clamping values and deviation from not blurring the mask in the laplacian stacks.</p>
+    <h3 align="middle">Outdoor to Indoor</h3>
+    <p>Here are results from going from outdoor to indoor.</p>
+    <center>
+        <img src="images/jose_outdoor_small.jpg" height="350">
+        <img src="images/jose_indoor_small.jpg" height="350">
+        <img src="results/outdoor_to_indoor.jpg" height="350">
+        <p>The third image is the result of using a mask.</p>
+    </center>
+    <center>
+        <img src="images/jose_outdoor_small.jpg" height="350">
+        <img src="images/jose_indoor_small.jpg" height="350">
+        <img src="results/outdoor_to_indoor_no_mask.jpg" height="350">
+        <p>The third image is the result of using NO mask.</p>
+    </center>
+    <p>Overall, much of the very diffused outdoor lighting on the original outdoor image was replaced with the lighting found in the indoor picture. If you look closely, the right side of the face in the output picture matches the lighting of the original indoor picture. The result obtained from not using a mask had better color matching than the results obtained using a mask.</p>
+    <h3 align="middle">Day to Night</h3>
+    <p>We also tried going from outdoor lighting to night lighting.</p>
+    <center>
+        <img src="images/jose_outdoor_small.jpg" height="350">
+        <img src="images/jose_lowlight_small.jpg" height="350">
+        <img src="results/day_to_night.jpg" height="350">
+        <p>The third image is the result of using a mask.</p>
+    </center>
+    <center>
+        <img src="images/jose_outdoor_small.jpg" height="350">
+        <img src="images/jose_lowlight_small.jpg" height="350">
+        <img src="results/day_to_night_no_mask.jpg" height="350">
+        <p>The third image is the result of using NO mask.</p>
+    </center>
+    <p> In general, the outdoor to night lighting experiment has failed. One positive aspect is, in the result with no mask, the yellow highlight on the right side of the faces was transferred. But, our algorithm does not transfer color as well as local contrast.</p>
+    <h3 align="middle">Night to Day</h3>
+    <p>Another combination is from night to daytime lighting.</p>
+    <center>
+        <img src="images/jose_lowlight_small.jpg" height="350">
+        <img src="images/jose_outdoor_small.jpg" height="350">
+        <img src="results/night_to_day.jpg" height="350">
+        <p>The third image is the result of using a mask.</p>
+    </center>
+    <center>
+        <img src="images/jose_lowlight_small.jpg" height="350">
+        <img src="images/jose_outdoor_small.jpg" height="350">
+        <img src="results/night_to_day_no_mask.jpg" height="350">
+        <p>The third image is the result of using NO mask.</p>
+    </center>
   </div>
 </body>

@@ -105,6 +105,7 @@ def robustTransfer(inputLapStack, warpedStack, inputEStack):
         gain = (warpedStack[i] / (inputEStack[i] + e_0)) ** 0.5
         gain[gain > gain_max] = gain_max
         gain[gain < gain_min] = gain_min
+        gain = lowPass(gain, 5*(2**i), 3*(2**i))
         newLayer = inputLapStack[i] * gain
         newGainStack.append(newLayer)
     return newGainStack
@@ -164,8 +165,8 @@ input_mask_gray = readGrayScale(folder + imname + _mask + file_type)
 example_mask_gray = readGrayScale(folder + im2name + _mask + file_type)
 input_mask = cv2.imread(folder + imname + _mask + file_type, 0)
 example_mask = cv2.imread(folder + im2name + _mask + file_type, 0)
-inputShape = np.loadtxt('./points/jose_indoor_points.txt')
-exampleShape = np.loadtxt('./points/jose_outdoor_points.txt')
+inputShape = np.loadtxt('./points/A_points_jose.txt')
+exampleShape = np.loadtxt('./points/A_points_chris.txt')
 
 
 configureBackground(example, example_mask, im2name)
