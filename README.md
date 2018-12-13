@@ -35,7 +35,7 @@ Example: `python3 ./make_mask.py ./jose.jpg`
 This file contains all commonly used functions. They mostly deal with using skimage, specific numpy operations, functions to make Laplacian and Gaussian stacks, and our warping function.
 
 ### main.py ###
-This file contains out algorithm for style transfer.
+This file contains out algorithm for style transfer. Time of execution is approximately 4 minutes with image being of size 602x750.
 
 Arguments:
 1. Name of input image, the image to have style transfer to it. Do not include the file extension, please put this image in `images/` folder.
