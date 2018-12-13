@@ -35,6 +35,7 @@
             <tr>
       </table>
   </div>
+  <h3 align="middle"><a href="https://github.com/jchavezberkeley/PortraitStyleTransfer" target="_blank">Code</a></h3>
   <h2 align ="middle"> Overview</h2>
   <div class="padded">
     <p>For our final project we take the paper "Style Transfer for Headshot Portraits" by Shih, Paris, Barnes, Freeman, and Durand,
@@ -89,7 +90,7 @@
       </center>
       <h3 align="middle">Gain Maps</h3>
       <p>At this point, we have energy stacks for both of our images, one for the original image, and one for the portrait warped into the shape of the original.
-        To transfer the energy over, we compute our output as follows, where <i>O</i> is ouput image of the following operation. <i>S_tilde</i> is our warped example portrait, and epsilon <i>e</i> is a small
+        To transfer the energy over, we compute our output as follows, where <i>O</i> is output image of the following operation. <i>S_tilde</i> is our warped example portrait, and epsilon <i>e</i> is a small
         number to avoid division by 0. In the paper, the recommended value for <i>e</i> was 0.0001:
       </p>
       <center>
@@ -124,7 +125,7 @@
           <img src="results/george_background.jpg" height="325">
       </center>
       <h3 align="middle">Results</h3>
-      <p>Below, we have the results for transfering the style of Clooney's portrait to the original portrait of Jose. We have original Jose, original George, and transferred Jose. We liked these results, as the lighting becomes balanced throughout Jose's face rather than bright on the right side only. More specifically, the algorithm transfered the lighting focused towards the front of the face. You can see that Jose's forehead is brighter than in the original image. However, the colors are not as bright as in Clooney's portrait,
+      <p>Below, we have the results for transferring the style of Clooney's portrait to the original portrait of Jose. We have original Jose, original George, and transferred Jose. We liked these results, as the lighting becomes balanced throughout Jose's face rather than bright on the right side only. More specifically, the algorithm transfered the lighting focused towards the front of the face. You can see that Jose's forehead is brighter than in the original image. However, the colors are not as bright as in Clooney's portrait,
         but this can be attributed to Jose's image being much darker to start with and attributed to our robust gain clamping values.
       </p>
       <center>
@@ -155,7 +156,7 @@
     <p>We tried this definition but unfortunately we could get this to work. The values outputted by this definition were in a very incompatible range, and our attempts to make it a compatible [0, 1] range failed. Therefore, we continued with regular convolution operations.</p>
     <h3 align="middle">Masks</h3>
     <p>Seen in the paper's specific convolution operator, there is a mask. In the paper, a binary mask was drawn over the heads in both pictures, fed into the convolution operator, and applied to the Laplacian layers. Since we were unsuccessful in using the convolution operator above, we only applied the mask to the Laplacian layers. We found that using binary masks gave us different results than not using binary masks. Below,
-      we have our results without a binary face mask and with a binary face mask, respectively. We noticed that not using a mask transfered more of the background/ambient color of the stylized portrait into the face. Not applying the mask to the Laplacian stacks allowed more of the color surrouding the head to be considered for transfer. However, the image now appears too saturated compared to image that did use a mask.
+      we have our results without a binary face mask and with a binary face mask, respectively. We noticed that not using a mask transfered more of the background/ambient color of the stylized portrait into the face. Not applying the mask to the Laplacian stacks allowed more of the color surrounding the head to be considered for transfer. However, the image now appears too saturated compared to image that did use a mask.
     </p>
     <center>
         <img src="results/output_nomask_test.jpg" height="350">
@@ -185,7 +186,7 @@
   <h2 align="middle">Clamping</h2>
   <div class="padded">
     <h3 align="middle">Robust Gain and Convolution</h3>
-    <p>In this section, we dicuss our observation with clamping gain values. According to the paper, "gain values below 1 mean a decrease of local contrast, and conversely, values greater than 1 mean an incrase." The paper defines a robust gain map that clamps high and low values: </p>
+    <p>In this section, we dicuss our observation with clamping gain values. According to the paper, "gain values below 1 mean a decrease of local contrast, and conversely, values greater than 1 mean an increase." The paper defines a robust gain map that clamps high and low values: </p>
     <center>
         <img src="images/RobustGain.png" height="50">
         <p>The paper defines <i>theta_h</i> = 2.8, <i>theta_l</i> = 0.9, <i>Beta</i> = 3</p>
@@ -232,7 +233,7 @@
   </div>
   <h2 align="middle">Experimental Results</h2>
   <div class="padded">
-    <p>The main goal of implementing this paper was to experiement transfering portrait styles from non-studio lighting scenarios. That is, in the paper and so far for this project, we have looked at transfering styles from a very stylized portrait, likely taken in an indoor studio with fancy lighting equipment. We came up with a new question: can we transfer styles from an indoor setting to an outdoor portrait and vice versa? Essentially, we tested our style transfer with non-stylized portraits and focused on natural environments. We aim to show the results, then discuss what transfered well and what didn't transfer well.</p>
+    <p>The main goal of implementing this paper was to experiement transferring portrait styles from non-studio lighting scenarios. That is, in the paper and so far for this project, we have looked at transferring styles from a very stylized portrait, likely taken in an indoor studio with fancy lighting equipment. We came up with a new question: can we transfer styles from an indoor setting to an outdoor portrait and vice versa? Essentially, we tested our style transfer with non-stylized portraits and focused on natural environments. We aim to show the results, then discuss what transfered well and what didn't transfer well.</p>
     <p>Below are two portraits in natural environments, one indoors and one outdoors respectively.</p>
     <div align="center">
         <table style="width=100%">
@@ -250,7 +251,7 @@
     </div>
     <p>The algorithm used for the experiments below uses manual correspondence finding and default clamping values.</p>
     <h3 align="middle">Indoor to Outdoor</h3>
-    <p>We tested transfering the style of the outdoor portrait to the indoor portrait, replacing the background. Below are the results.</p>
+    <p>We tested transferring the style of the outdoor portrait to the indoor portrait, replacing the background. Below are the results.</p>
     <center>
         <img src="images/jose_indoor_small.jpg" height="350">
         <img src="images/jose_outdoor_small.jpg" height="350">
@@ -263,7 +264,7 @@
         <img src="results/indoor_to_outdoor_small.jpg" height="350">
         <p>The third image is the result of using NO mask.</p>
     </center>
-    <p>As before, our algorithm managed to transfer the very diffused lighting found outdoors to the face in the indoor picture. However, now our result looks too washed out. We believed this was a result of our algorithm's deviation from not blurring the mask in the laplacian stacks, which would have helped transfer more matching color values surrouding the head.</p>
+    <p>As before, our algorithm managed to transfer the very diffused lighting found outdoors to the face in the indoor picture. However, now our result looks too washed out. We believed this was a result of our algorithm's deviation from not blurring the mask in the laplacian stacks, which would have helped transfer more matching color values surrounding the head.</p>
     <h3 align="middle">Outdoor to Indoor</h3>
     <p>Here are results from going from outdoor to indoor.</p>
     <center>
@@ -338,7 +339,7 @@
   </div>
   <h2 align="middle">Summary</h2>
   <div class="padded">
-    <p>The best results came from automatically finding dense correspondence points and not using a mask on portraits with similar head sizes and positions. For transfering styles between different head sizes, manually finding dense correspondence points worked to avoid "ghost" effects. In addition, the default clamping values in the paper allowed for the best contrast as our own attempts to increase the contrasts failed.</p>
+    <p>The best results came from automatically finding dense correspondence points and not using a mask on portraits with similar head sizes and positions. For transferring styles between different head sizes, manually finding dense correspondence points worked to avoid "ghost" effects. In addition, the default clamping values in the paper allowed for the best contrast as our own attempts to increase the contrasts failed.</p>
     <p>We enjoyed this project as we got to learn about energy and gain maps and how they work to transfer lighting and color. It refined our knowledge of warping, Laplacian stacks, and using correspondences. Finally, we were able to output a few decent results, such as the George-Jose result and the indoor to outdoor result with automatic correspondences. We unfortunately were not able to accurately explain some of the results with testing different clamping values, but tried our best in explaining how choosing to automatically find correspondence points led to better color transfers.</p>
   </div>
 </body>
