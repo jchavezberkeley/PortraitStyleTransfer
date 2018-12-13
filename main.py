@@ -46,9 +46,8 @@ def getFacialLandmarks(image):
 
         for corner in corners:
             shape = np.vstack((shape, corner))
-        triangulation = scipy.spatial.Delaunay(shape)
 
-    return shape, triangulation
+    return shape
 
 def getGaussianStacks(inputIm, exampleIm, stack_depth):
     gStackInput = GaussianStack(inputIm, 45, 2, stack_depth)
@@ -120,10 +119,7 @@ def configureBackground(image, mask, im2name):
     saveImage('./images/' + im2name + '_background.jpg', background)
 
 #This is based more off of the matlab code
-def styleTransfer(input, example, input_mask, example_mask, input_channel, example_channel, useMask):
-
-    inputShape, inputTri = getFacialLandmarks(input)
-    exampleShape, exampleTri = getFacialLandmarks(example)
+def styleTransfer(input, example, input_mask, example_mask, input_channel, example_channel, inputShape, exampleShape, useMask):
     inputTri = scipy.spatial.Delaunay(inputShape)
     exampleTri = scipy.spatial.Delaunay(exampleShape)
     stack_depth = 6
@@ -149,12 +145,14 @@ imname = sys.argv[1]
 im2name = sys.argv[2]
 gray = True if sys.argv[3].lower() == 'true' else False
 useMask = True if sys.argv[4].lower() == 'true' else False
-outname = sys.argv[5]
+usePoints = True if sys.argv[5].lower() == 'true' else False
+outname = sys.argv[6]
 
 folder = './images/'
 file_type = '.jpg'
 _mask = '_mask'
 _background = '_background'
+_points = '_points.txt'
 
 input = read(folder + imname + file_type)
 example = read(folder + im2name + file_type)
@@ -167,12 +165,18 @@ example_mask_gray = readGrayScale(folder + im2name + _mask + file_type)
 input_mask = cv2.imread(folder + imname + _mask + file_type, 0)
 example_mask = cv2.imread(folder + im2name + _mask + file_type, 0)
 
+if usePoints:
+    inputShape = np.loadtxt('./points/' + imname + _points)
+    exampleShape = np.loadtxt('./points/' + im2name + _points)
+else:
+    inputShape = getFacialLandmarks(input)
+    exampleShape = getFacialLandmarks(example)
 
 configureBackground(example, example_mask, im2name)
 
 if gray:
     background_colors = readGrayScale(folder + im2name + _background + file_type)
-    gray = styleTransfer(input, example, input_mask_gray, example_mask_gray, input_gray, example_gray, useMask)
+    gray = styleTransfer(input, example, input_mask_gray, example_mask_gray, input_gray, example_gray, inputShape, exampleShape, useMask)
     gray = (background_colors * (1-input_mask_gray)) + (gray * input_mask_gray)
     output = gray
 else:
@@ -181,11 +185,11 @@ else:
     background_green = background_colors[1]
     background_blue = background_colors[2]
 
-    red = styleTransfer(input, example, input_mask_gray, example_mask_gray, input_colors[0], example_colors[0], useMask)
+    red = styleTransfer(input, example, input_mask_gray, example_mask_gray, input_colors[0], example_colors[0], inputShape, exampleShape, useMask)
 
-    green = styleTransfer(input, example, input_mask_gray, example_mask_gray, input_colors[1], example_colors[1], useMask)
+    green = styleTransfer(input, example, input_mask_gray, example_mask_gray, input_colors[1], example_colors[1], inputShape, exampleShape, useMask)
 
-    blue = styleTransfer(input, example, input_mask_gray, example_mask_gray, input_colors[2], example_colors[2], useMask)
+    blue = styleTransfer(input, example, input_mask_gray, example_mask_gray, input_colors[2], example_colors[2], inputShape, exampleShape, useMask)
 
     red = (background_red * (1-input_mask_gray)) + (red * input_mask_gray)
     green = (background_green * (1-input_mask_gray)) + (green * input_mask_gray)

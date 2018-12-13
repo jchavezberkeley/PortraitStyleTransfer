@@ -42,6 +42,7 @@ Arguments:
 2. Name of example image, the image to transfer style from. Do not include the file extension, please put this image in `images/` folder.
 3. Boolean value, either True or False, on whether you want result to be in grayscale.
 4. Boolean value, either True or False, on whether you want to use binary mask in the Laplacian stacks
-5. Name of file to be outputted. Do not include extension.
+5. Boolean value, either True or False, on whether you want to use correspondences found manually
+6. Name of file to be outputted. Do not include extension.
 
-Example: `python3 ./main.py jose george false true jose_george_test`
+Example: `python3 ./main.py jose george false true false jose_george_test`
