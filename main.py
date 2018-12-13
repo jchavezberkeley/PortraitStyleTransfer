@@ -55,9 +55,9 @@ def getGaussianStacks(inputIm, exampleIm, stack_depth):
     gStackExample = GaussianStack(exampleIm, 45, 2, stack_depth)
     return gStackInput, gStackExample
 
-def getLaplacianStacks(inputIm, exampleIm, input_mask, example_mask, stack_depth):
-    lStackInput = LaplacianStackAlt(inputIm, input_mask, stack_depth)
-    lStackExample = LaplacianStackAlt(exampleIm, example_mask, stack_depth)
+def getLaplacianStacks(inputIm, exampleIm, input_mask, example_mask, stack_depth, useMask):
+    lStackInput = LaplacianStackAlt(inputIm, input_mask, stack_depth, useMask)
+    lStackExample = LaplacianStackAlt(exampleIm, example_mask, stack_depth, useMask)
     return lStackInput, lStackExample
 
 def getResidualStack(img, imgStack):
@@ -120,15 +120,15 @@ def configureBackground(image, mask, im2name):
     saveImage('./images/' + im2name + '_background.jpg', background)
 
 #This is based more off of the matlab code
-def styleTransfer(input, example, input_mask, example_mask, inputShape, exampleShape, input_channel, example_channel):
+def styleTransfer(input, example, input_mask, example_mask, input_channel, example_channel, useMask):
+
     inputShape, inputTri = getFacialLandmarks(input)
     exampleShape, exampleTri = getFacialLandmarks(example)
     inputTri = scipy.spatial.Delaunay(inputShape)
     exampleTri = scipy.spatial.Delaunay(exampleShape)
-
     stack_depth = 6
 
-    lStackInput, lStackExample = getLaplacianStacks(input_channel, example_channel, input_mask, example_mask, stack_depth)
+    lStackInput, lStackExample = getLaplacianStacks(input_channel, example_channel, input_mask, example_mask, stack_depth, useMask)
 
     input_residual = getResidual(input_channel, input_mask, stack_depth)
     example_residual = getResidual(example_channel, example_mask, stack_depth)
@@ -148,7 +148,8 @@ def styleTransfer(input, example, input_mask, example_mask, inputShape, exampleS
 imname = sys.argv[1]
 im2name = sys.argv[2]
 gray = True if sys.argv[3].lower() == 'true' else False
-outname = sys.argv[4]
+useMask = True if sys.argv[4].lower() == 'true' else False
+outname = sys.argv[5]
 
 folder = './images/'
 file_type = '.jpg'
@@ -165,15 +166,13 @@ input_mask_gray = readGrayScale(folder + imname + _mask + file_type)
 example_mask_gray = readGrayScale(folder + im2name + _mask + file_type)
 input_mask = cv2.imread(folder + imname + _mask + file_type, 0)
 example_mask = cv2.imread(folder + im2name + _mask + file_type, 0)
-inputShape = np.loadtxt('./points/A_points_jose.txt')
-exampleShape = np.loadtxt('./points/A_points_chris.txt')
 
 
 configureBackground(example, example_mask, im2name)
 
 if gray:
     background_colors = readGrayScale(folder + im2name + _background + file_type)
-    gray = styleTransfer(input, example, input_mask_gray, example_mask_gray, inputShape, exampleShape, input_gray, example_gray)
+    gray = styleTransfer(input, example, input_mask_gray, example_mask_gray, input_gray, example_gray, useMask)
     gray = (background_colors * (1-input_mask_gray)) + (gray * input_mask_gray)
     output = gray
 else:
@@ -182,11 +181,11 @@ else:
     background_green = background_colors[1]
     background_blue = background_colors[2]
 
-    red = styleTransfer(input, example, input_mask_gray, example_mask_gray, inputShape, exampleShape, input_colors[0], example_colors[0])
+    red = styleTransfer(input, example, input_mask_gray, example_mask_gray, input_colors[0], example_colors[0], useMask)
 
-    green = styleTransfer(input, example, input_mask_gray, example_mask_gray, inputShape, exampleShape, input_colors[1], example_colors[1])
+    green = styleTransfer(input, example, input_mask_gray, example_mask_gray, input_colors[1], example_colors[1], useMask)
 
-    blue = styleTransfer(input, example, input_mask_gray, example_mask_gray, inputShape, exampleShape, input_colors[2], example_colors[2])
+    blue = styleTransfer(input, example, input_mask_gray, example_mask_gray, input_colors[2], example_colors[2], useMask)
 
     red = (background_red * (1-input_mask_gray)) + (red * input_mask_gray)
     green = (background_green * (1-input_mask_gray)) + (green * input_mask_gray)

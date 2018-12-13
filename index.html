@@ -23,7 +23,7 @@
   <h2 align ="middle"> Overview</h2>
   <div class="padded">
     <p>For our final project we take the paper "Style Transfer for Headshot Portraits" by Shih, Paris, Barnes, Freeman, and Durand,
-      and implement it ourselves in Python3. A lot of the techniques used in the paper, such as Laplacian stacks, image warping, and matching,
+      and implement it ourselves in Python3. The website for the paper, containing the Matlab implementation and PDF is <a href="https://people.csail.mit.edu/yichangshih/portrait_web/" target="_blank">here</a>. A lot of the techniques used in the paper, such as Laplacian stacks, image warping, and matching,
       have been learned in this class and used previously, albeit slightly differently. We then take our best implementation of the paper and experiment
       with its results on our different lighting scenarios. Below, you can find our results in multiple different scenarios.</p>
     <p>The goal of this project is to take two photos and transfer one headshot photo into the style of another headshot photo. To do this, we
@@ -32,7 +32,7 @@
   </div>
   <h2 align="middle">Dense Correspondences</h2>
   <div class="padded">
-    <p>The first step in our process is to compute dense correspondences. Previously, we manually annotated photos to have very exact correspondences, but in this approach, we first attempt to use automatic software. We attempted to use an automatic face matching program, using dlib and OpenCV, that can be found <a href="https://www.pyimagesearch.com/2017/04/03/facial-landmarks-dlib-opencv-python/" target="_blank">here</a>. However, this matches only the part of the face below the forehead and within the ears, so this approach led to some problems which will be displayed below. Since the triangulations were not as exact as in manual correspondences, we resorted to manual correspondences. From these triangulations, we compute affine transforms and warp one image into the shape of the other. Below is an example of our triangulations, which we use to warp one image into the shape of another. </p>
+    <p>The first step in our process is to compute dense correspondences. Previously, we manually annotated photos to have very exact correspondences. In the first pass of this approach, we attempted to use an automatic software, using dlib and OpenCV, that can be found <a href="https://www.pyimagesearch.com/2017/04/03/facial-landmarks-dlib-opencv-python/" target="_blank">here</a>. This software finds 66 dense correspondence points specifically in the face region. However, as we explain in our results, the correspondence points only matched the part of the face below the forehead and within the ears, leading to warping issues. Since the Delaunay triangulations were not as exact as in manual correspondences, we resorted to 43 manual correspondences for these specific results, using techniques learned in the face morphing project. From these triangulations, we compute affine transforms and warp one image into the shape of the other. Below are the triangulations found using our manually choses correspondence points:</p>
     <div align="center">
         <table style="width=100%">
               <tr>
@@ -64,14 +64,17 @@
           <img src="images/Residual.png" height="50">
       </center>
       <h3 align="middle">Energy Maps</h3>
-      <p>From there, we compute the local energy as follows: </p>
+      <p>From there, we compute the local energy for both images with the equation below. This steps allows us to capture the frequency profiles in the images. As the paper describes, "this estimates how much the signal locally varies at a given scale." Essentially, these energy maps are going to pick up strengths in lighting and color, and they will eventually transfer them onto the image after we sum everything up.</p>
       <center>
           <img src="images/LocalEnergy.png" height="30">
       </center>
       <p>We then warp every level of our portrait energy stack to the shape of our input image, through the triangulation defined in the above section. </p>
+      <center>
+          <img src="images/WarpEnergy.png" height="60">
+      </center>
       <h3 align="middle">Gain Maps</h3>
       <p>At this point, we have energy stacks for both of our images, one for the original image, and one for the portrait warped into the shape of the original.
-        To transfer the energy over, we compute our output as follows, where <i></i> is ouput image of the follow operation. <i>S_tilde</i> is our warped example portrait, and epsilon <i>e</i> is a small
+        To transfer the energy over, we compute our output as follows, where <i>O</i> is ouput image of the following operation. <i>S_tilde</i> is our warped example portrait, and epsilon <i>e</i> is a small
         number to avoid division by 0. In the paper, the recommended value for <i>e</i> was 0.0001:
       </p>
       <center>
@@ -94,8 +97,8 @@
           <img src="energyStacks/george_stack3.jpg" height="350">
           <img src="energyStacks/george_stack4.jpg" height="350">
       </center>
-
-      <p>Our stacks span 6 levels, the number of levels used in the paper. We will come back to experiment with the stack depth. Also in the paper, the gain maps are clamped to avoid outliers. We also clamp the gain at a maximum of 2.8 and a minimum of 0.9, the values used in the paper, to have robust gain maps.
+      <p>Notice that the yellow areas in the energy maps correspond to most of the lighting falling on the faces.</p>
+      <p>Our stacks span 6 levels, the number of levels used in the paper. Also in the paper, the gain maps are clamped to avoid outliers. Explained more in a section below, we clamp the gain at a maximum of 2.8 and a minimum of 0.9, the values used in the paper, to have robust gain maps.
         To get our final output image, we warp our example residual into the shape of our original photo and sum up our stack with this warped residual image.
       </p>
       <h3 align="middle">Background</h3>
@@ -105,10 +108,9 @@
           <img src="images/george_mask.jpg" height="325">
           <img src="results/george_background.jpg" height="325">
       </center>
-      <p>Weird artifacts are due to inaccuracies with the mask.</p>
       <h3 align="middle">Results</h3>
-      <p>Below, we have the results for transfering the style of Clooney's portrait to the original portrait of Jose. Here, we have original Jose, original George, and transferred Jose. We liked these results, as the lighting becomes balanced throughout Jose's face rather than bright on the right side only. In fact, the algorithm transfer a lot of the lighting, focused towards the front of the face. You can see that Jose's forehead is brighter than in the original image. However, the colors are not as bright as in Clooney's portrait,
-        but this can be attributed to Jose's image being much darker to start with, and our robust gain clamping the gain.
+      <p>Below, we have the results for transfering the style of Clooney's portrait to the original portrait of Jose. Here, we have original Jose, original George, and transferred Jose. We liked these results, as the lighting becomes balanced throughout Jose's face rather than bright on the right side only. More specifically, the algorithm transfered the lighting focused towards the front of the face. You can see that Jose's forehead is brighter than in the original image. However, the colors are not as bright as in Clooney's portrait,
+        but this can be attributed to Jose's image being much darker to start with, and our robust gain clamping values.
       </p>
       <center>
           <img src="images/jose.jpg" height="325">
@@ -119,10 +121,13 @@
   <h2 align="middle">Deviations</h2>
   <div class="padded">
     <h3 align="middle">Manual vs Automatic Correspondences</h3>
-    <p>While their implementation did not specify how they defined correspondences, we chose to do this by using manually selected points for reasons specified above.
-      Using an automatic correspondence finder, we found that it did not match the face from above the forehead and outside the ears, so the warped face went beyond
+    <p>While their implementation did not specify how they defined correspondences, we chose to find our correspondences, for the George and Jose example, by using manually selected points.
+      Using the OpenCV automatic correspondence finder, we found that the points did not match regions towards the forehead and outside the ears, so the warped face went beyond
       our original face, resulting in odd blurs. Below are the comparisons.
     </p>
+    <center>
+        <img src="images/auto_points.png" height="350">
+    </center>
     <center>
         <img src="results/output_color_test.jpg" height="350">
         <img src="results/output_full_color.jpg" height="350">
@@ -134,13 +139,14 @@
     </center>
     <p>We tried this definition but unfortunately we could get this to work. The values outputted by this definition were in a very incompatible range, and our attempts to make it a compatible [0, 1] range failed. Therefore, we continued with regular convolution operations.</p>
     <h3 align="middle">Masks</h3>
-    <p>In the paper, we found that using masks gave us different results than not using binary masks for faces. Below,
+    <p>Seen in the paper's specific convolution operator, there is a mask. In the paper, a binary mask was drawn over the heads in both pictures, fed into the convolution operator, and applied to the Laplacian layers. Since we were unsuccessful in using the convolution operator above, we only applied the mask to the Laplacian layers. We found that using binary masks gave us different results than not using binary masks for faces. Below,
       we have our results without a binary face mask and with a binary face mask, respectively. We noticed that not using a mask transfered more of the background/ambient color of the stylized portrait into the face. Not applying the mask to the Laplacian stacks allowed more of the color surrouding the head to be considered for transfer. However, the image now appears too saturated compared to image that did use a mask.
     </p>
     <center>
         <img src="results/output_nomask_test.jpg" height="350">
         <img src="results/output_full_color.jpg" height="350">
     </center>
+    <p>For our experiments, we show the results of using a mask and not using a mask.</p>
   </div>
   <h2 align="middle">Black and White Portraits</h2>
   <div class="padded">
@@ -151,7 +157,7 @@
         <img src="results/jose_chris_nomask.jpg" height="325">
         <p>The third image is the result of using NO mask.</p>
     </center>
-    <p>From this result, we can see that our implementation was able to transfer the lighting contrasts. For example, in the portrait, the light is strong on the left side of the face, with a dark contrast on the right. In our output picture, the lighting on the left side of the face expanded to a region that matches the lighting found on Chris' left half. Specifically, light can be found on the forehead of the outputted Jose portrait, but not in the original Jose portrait.</p>
+    <p>From this result, we can see that our implementation was able to transfer lighting directions and areas. For example, in the portrait, the light is strong on the left side of the face, with a dark contrast on the right. In our output picture, the lighting on the left side of the face expanded to a region that matches the lighting found on Chris' left half. Specifically, light can be found on the forehead of the outputted Jose portrait, but not in the original Jose portrait.</p>
     <p>However, our result doesn't have the dramatic contrast found in the Chris portrait. Likewise, in the output picture, it appears slightly darker around the chin and along the sides of the face. This, we believe, is because our implemenation managed to treat the facial hair of Chris as a dark spot in the lighting. This is why the upper lip and chin in the output picture appear darker than the light on the left eye. We found this to be an interesting result, as we didn't anticipate the effects of facial hair. This effect was not explained or adjusted for in the paper.</p>
     <p>To address the lack of dramatic contrast, we experimented with the clamping values. The results will be displayed in a further section. Below are the results with a mask.</p>
     <center>
@@ -169,7 +175,7 @@
         <img src="images/RobustGain.png" height="50">
         <p>The paper defines <i>theta_h</i> = 2.8, <i>theta_l</i> = 0.9, <i>Beta</i> = 3</p>
     </center>
-    <p>Values were clamped to avoid "phantom" effects. The clamping was done very fast by vectorizing our code.</p>
+    <p>Values were clamped to avoid "phantom" effects. Our clamping was done very fast by vectorizing our code.</p>
     <center>
         <img src="images/gain_clamp.png" height="70">
     </center>
@@ -199,7 +205,7 @@
     <center>
         <img src="results/output_nomask_test.jpg" height="325">
         <img src="results/output_nomask_3.0_0.9.jpg" height="325">
-        <p>The image on the right has a <i>theta_h</i> = 1.7, <i>theta_l</i> = 0.5.</p>
+        <p>The image on the right has a <i>theta_h</i> = 3.0, <i>theta_l</i> = 0.9.</p>
     </center>
     <p>Now we noticed no difference between the result with the higher max gain and the default max gain. After this, we decided to lower both numbers to 1.7 and 0.5:</p>
     <center>
@@ -207,7 +213,7 @@
         <img src="results/output_nomask_1.7_0.5.jpg" height="325">
         <p>The image on the right has a <i>theta_h</i> = 1.7, <i>theta_l</i> = 0.5.</p>
     </center>
-    <p>Lowering both the min gain and the max gain made the output image significantly more washed out. This result confused us because it seemed to go again the intuition that the paper mentioned, in which we expected that the higher values would make the lighting more dramatic. In addition, when we lowered the values, the image color was completely washed out. We unfortunately weren't able to come up with an explanation for these results and didn't find any useful information on this in the paper. For the rest of the project, we kept the min and max gain values as the default ones from the paper.</p>
+    <p>Lowering both the min gain and the max gain made the output image significantly more washed out. This result confused us because it seemed to go against the intuition that the paper mentioned, in which we expected that the higher values would make the lighting more dramatic. In addition, when we lowered the values, the image color was completely washed out. We unfortunately weren't able to come up with an explanation for these results and didn't find any useful information on this in the paper. For the rest of the project, we kept the min and max gain values as the default ones from the paper.</p>
   </div>
   <h2 align="middle">Experimental Results</h2>
   <div class="padded">
@@ -227,6 +233,7 @@
               <tr>
         </table>
     </div>
+    <p>The algorithm used for the experiments below uses manual correspondence finding and default clamping values.</p>
     <h3 align="middle">Indoor to Outdoor</h3>
     <p>We tested transfering the style of the outdoor portrait to the indoor portrait, replacing the background. Below are the results.</p>
     <center>
@@ -241,7 +248,7 @@
         <img src="results/indoor_to_outdoor_small.jpg" height="350">
         <p>The third image is the result of using NO mask.</p>
     </center>
-    <p>As before, our algorithm managed to transfer the very diffused lighting found outdoors to the face in the indoor picture. However, now our result look too washed out. We believe this is a result of our algorithm's clamping values and deviation from not blurring the mask in the laplacian stacks.</p>
+    <p>As before, our algorithm managed to transfer the very diffused lighting found outdoors to the face in the indoor picture. However, now our result looks too washed out. We believed this is a result of our algorithm's deviation from not blurring the mask in the laplacian stacks, which would have helped transfer more matching color values surrouding the head.</p>
     <h3 align="middle">Outdoor to Indoor</h3>
     <p>Here are results from going from outdoor to indoor.</p>
     <center>
@@ -286,11 +293,11 @@
         <img src="results/night_to_day_no_mask.jpg" height="350">
         <p>The third image is the result of using NO mask.</p>
     </center>
-    <p>In general, a lot of our color could not be transfered like they were transfered in the paper. Taking into account implementation differences, we couldn't develop an explanation as to why we couldn't transfer color effectively. At this point, we thought that the differences in our implementation, such as the masked blurring, manual correspondence points, wouldn't affect the transfer of color. However, in the next section, we show the results of us using auto correspondence finding rather than manual.</p>
+    <p>In general, a lot of our color could not be transfered like they were transfered in the paper. Taking into account implementation differences, we couldn't develop an explanation as to why we couldn't transfer color effectively. At this point, we thought that the differences in our implementation, such as the masked blurring, manual correspondence points, was affect the transfer of color. In the next section, we show the results of us using auto correspondence finding rather than manually found correspondence points.</p>
   </div>
   <h2 align="middle">Auto Finding Correspondences</h2>
   <div class="padded">
-    <p>Our more promising result from the indoor outdoor experiments came from using the OpenCV/dlib program mentioned earlier that automatically found dense correspondence point on the face. Below is the comparison of the results of going from indoor to outdoor.</p>
+    <p>Our more promising result from the indoor outdoor experiments came from using the OpenCV/dlib program mentioned earlier that automatically found dense correspondence points on faces. Below is the comparison of the results of going from indoor to outdoor.</p>
     <center>
         <img src="results/indoor_to_outdoor_small_mask.jpg" height="325">
         <img src="results/indoor_to_outdoor_auto.jpg" height="325">
@@ -301,5 +308,22 @@
         <img src="results/indoor_to_outdoor_auto_no_mask.jpg" height="325">
         <p>The image on the right was obtained using automatically found correspondence points by the OpenCV program and a mask</p>
     </center>
+    <p>To better analyze the difference, we looked at the warped energy stacks. The images on the right are the images found using automatically found correspondence points and the images on the left are the images found using manually found correspondence points.</p>
+    <center>
+        <img src="energyStacks/outdoor_manual_0.jpg" height="350">
+        <img src="energyStacks/outdoor_auto_0.jpg" height="350">
+    </center>
+    <center>
+        <img src="energyStacks/outdoor_manual_1.jpg" height="350">
+        <img src="energyStacks/outdoor_auto_1.jpg" height="350">
+    </center>
+    <p>Already we noticed that the warped energy stacks with manually found points have more overall energy in the picture, producing an overall greener tone versus the photos with the automatically found points, having less overall image energy. Everything up to this point in the algorithm has remained the same for both automatically and manually found correspondence points. Therefore, having those manually found correspondence points led to an overall energy increase. </p>
+    <p>One possible explanation for this is that the 66 points found using the automatic program increased the density of the triangulation in the face region, therefore making the triangles smaller. Taking into account that the faces are relatively positioned similarily in both photos, most of the triangles didn't have a large warp, which would have led most of the pixels to be greatly interpolated. Instead, the small warp values means that a lot of the original color was more accurately transfered over. The less dense manually found points introduced the possibility of larger warps as the triangles were larger.</p>
+    <p>Overall, the color transfer worked better for this example, especially since we used Jose's face in both images, roughly the same size in each image. Recall that this didn't work with George's head which was significantly bigger in his portrait.</p>
+  </div>
+  <h2 align="middle">Summary</h2>
+  <div class="padded">
+    <p>The best results came from automatically finding dense correspondence points and not using a mask on portraits with similar head sizes and positions, seen in the indoor and outdoor lighting tests. For transfering styles between different head sizes, manually finding dense correspondence points worked to avoid "ghost" effects. In addition, the default clamping values in the paper allowed for the best contrast as our own attempts to increase the contrasts failed.</p>
+    <p>We enjoyed this project as we got to learn energy and gain maps and how they work to transfer lighting and color. It refined our knowledge of warping, Laplacian stacks, and using correspondences. Finally, we were able to output a few decent results, such as the George-Jose result and the indoor to outdoor result with automatic correspondences. We unfortunately not able to accurately explain some of the results with testing different clamping values, but tried our best in explaining how choosing to automatically find correspondence points led to better color transfers.</p>
   </div>
 </body>

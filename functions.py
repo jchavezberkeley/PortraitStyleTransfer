@@ -160,17 +160,18 @@ Likewise, I try to match the implementation as much as possible.
 This version also takes in a mask but haven't added that part yet.
 Read section 'Using a Mask' in the paper for why this is important.
 """
-def LaplacianStackAlt(image, mask, stack_depth):
+def LaplacianStackAlt(image, mask, stack_depth, useMask):
     stack = []
     stack.append(image)
     for i in range(1, stack_depth):
         sigma = 2 ** i
-        #stack.append(lowPassMask(image, sigma*5, sigma, mask))
         stack.append(lowPass(image, sigma*5, sigma))
 
     for i in range(len(stack)-1):
-        stack[i] = rescale(stack[i] - stack[i+1])
-        #stack[i] = rescale((stack[i] - stack[i+1])*mask)
+        if useMask:
+            stack[i] = rescale(stack[i] - stack[i+1]*mask)
+        else:
+            stack[i] = rescale(stack[i] - stack[i+1])
     return stack
 
 #Aggregates all images in STACK
@@ -217,147 +218,3 @@ def warp(image, source_points, target_points, tri):
                 continue
 
     return out_image
-
-"""
-def getInvWarpMat(triangleIndices, srcKeypoints, avgKeypoints):
-    # Initialize arrays for holding x and y indices of triangle vertices
-    srcImg_x = np.zeros(3)
-    srcImg_y = np.zeros(3)
-    avgImg_x = np.zeros(3)
-    avgImg_y = np.zeros(3)
-
-    # grab correct indices
-    index = 0
-    for j in triangleIndices:
-        avgImg_x[index] = avgKeypoints[j][0]  # X indices of triangle vertices (index into 1 because points are (column, row))
-        avgImg_y[index] = avgKeypoints[j][1]  # Y indices of triangle vertices (index into 0 because points are (column, row))
-        srcImg_x[index] = srcKeypoints[j][0]  # X indices of triangle vertices (index into 1 because points are (column, row))
-        srcImg_y[index] = srcKeypoints[j][1]  # Y indices of triangle vertices (index into 0 because points are (column, row))
-        index += 1
-
-    # Create matrix for source image
-    srcCol_0 = np.array([srcImg_x[0], srcImg_y[0], 1])  # One column is in the form (x1, y1, 1)
-    srcCol_1 = np.array([srcImg_x[1], srcImg_y[1], 1])  # (x2, y2, 1)
-    srcCol_2 = np.array([srcImg_x[2], srcImg_y[2], 1])  # (x3, y3, 1)
-    srcImgMatrix = np.column_stack((srcCol_0, srcCol_1, srcCol_2))  # [[x1, x2, x3],
-    # [y1, y2, y3],
-    # [ 1,  1,  1]]
-
-    # Create matrix for midpoint image
-    avgCol_0 = np.array([avgImg_x[0], avgImg_y[0], 1])  # One column is in the form (x1, y1, 1)
-    avgCol_1 = np.array([avgImg_x[1], avgImg_y[1], 1])  # (x2, y2, 1)
-    avgCol_2 = np.array([avgImg_x[2], avgImg_y[2], 1])  # (x3, y3, 1)
-    avgImgMatrix = np.column_stack((avgCol_0, avgCol_1, avgCol_2))  # [[x1, x2, x3],
-    # [y1, y2, y3],
-    # [ 1,  1,  1]]
-
-    # Compute T transformation matrix
-    # M = Midway Matrix
-    # M = TA -------> T = MA^(-1)
-    transformMat = scipy.matmul(avgImgMatrix, scipy.linalg.inv(srcImgMatrix))
-
-    # Return T^(-1) so that we can use inverse transformation
-    return scipy.linalg.inv(transformMat)
-
-def morph(imgA, imgB, srcKeypoints, targetKeypoints, warp_frac, dissolve_frac, IS_GRAY=False):
-    midway = np.zeros(imgB.shape)
-
-    avgKeypoints = []
-    for i in range(len(srcKeypoints)):
-        avg_x = srcKeypoints[i][0]*(1 - warp_frac) + targetKeypoints[i][0] * warp_frac
-        avg_y = srcKeypoints[i][1]*(1 - warp_frac) + targetKeypoints[i][1] * warp_frac
-        avgPt = (avg_x, avg_y)
-        avgKeypoints.append(avgPt)
-    avgKeypoints = np.array(avgKeypoints)
-
-    midTriangulation = scipy.spatial.Delaunay(avgKeypoints)
-
-    height = np.arange(len(imgA))
-    width = np.arange(len(imgA[0]))
-    if IS_GRAY:
-        interpFuncGreyA = scipy.interpolate.interp2d(np.arange(len(width)), np.arange(len(height)), imgA)
-        interpFuncGreyB = scipy.interpolate.interp2d(np.arange(len(width)), np.arange(len(height)), imgB)
-    else:
-        interpFuncA_R = scipy.interpolate.interp2d(np.arange(len(width)), np.arange(len(height)), imgA[:, :, 0])
-        interpFuncA_G = scipy.interpolate.interp2d(np.arange(len(width)), np.arange(len(height)), imgA[:, :, 1])
-        interpFuncA_B = scipy.interpolate.interp2d(np.arange(len(width)), np.arange(len(height)), imgA[:, :, 2])
-
-        interpFuncB_R = scipy.interpolate.interp2d(np.arange(len(width)), np.arange(len(height)), imgB[:, :, 0])
-        interpFuncB_G = scipy.interpolate.interp2d(np.arange(len(width)), np.arange(len(height)), imgB[:, :, 1])
-        interpFuncB_B = scipy.interpolate.interp2d(np.arange(len(width)), np.arange(len(height)), imgB[:, :, 2])
-
-    # Iterate through each triangle
-    for i in range(len(midTriangulation.simplices)):
-        midTriangleIndices = midTriangulation.simplices[i]  # Triangle of midway image
-        # Initialize arrays to hold x,y coordinates of triangle vertices
-        avgImg_x = np.zeros(3)
-        avgImg_y = np.zeros(3)
-
-        #     Iterate through the 3 vertices in the triangle
-        #     j is a number representing the index of the point in the keypoints
-        index = 0
-        for j in midTriangleIndices:
-            avgImg_x[index] = avgKeypoints[j][1]  # X indices of triangle vertices (index into 1 because points are (column, row))
-            avgImg_y[index] = avgKeypoints[j][0]  # Y indices of triangle vertices (index into 0 because points are (column, row))
-            index += 1
-
-        midTriangle = avgKeypoints[midTriangleIndices]
-
-        # Mid = M
-        # M = TA -> T = (MA^(-1))
-        AtoMidInvWarpMat = getInvWarpMat(midTriangleIndices, srcKeypoints, avgKeypoints)
-
-        # M = TB -> T = (MB^(-1))
-        BtoMidInvWarpMat = getInvWarpMat(midTriangleIndices, targetKeypoints, avgKeypoints)
-
-        # polygon(r, c, shape=None) -> rr, cc
-        # r = row coordinates of vertices in polygon
-        # c = column coordinates of vertices in polygon
-        # Returns row coords and col coords of image
-        triangleRows, triangleCols = skimage.draw.polygon(avgImg_x, avgImg_y)
-
-        # Iterate through points of the form (x,y)
-        for x, y in zip(triangleCols, triangleRows):
-            # Create array for point of final img
-            midImgPt = np.array([x, y, 1])
-
-            # Inverse warp on pt in midpoint gets us point in A
-            APt = np.dot(AtoMidInvWarpMat, midImgPt)
-            AX, AY = APt[0], APt[1]
-
-            # Inverse warp on pt in midpoint gets us point in B
-            BPt = np.dot(BtoMidInvWarpMat, midImgPt)
-            BX, BY = BPt[0], BPt[1]
-
-            if IS_GRAY:
-                #Interpolate on both points to get respective values
-                AinterpVal = interpFuncGreyA(AX, AY)
-                BinterpVal = interpFuncGreyB(BX, BY)
-
-                #Average value and set midway point
-                midwayVal = AinterpVal*(1 - dissolve_frac) + BinterpVal * dissolve_frac
-                midway[y, x] = midwayVal
-
-            else:
-                A_redInterpVal = interpFuncA_R(AX, AY)
-                A_greenInterpVal = interpFuncA_G(AX, AY)
-                A_blueInterpVal = interpFuncA_B(AX, AY)
-                A_val = np.array([A_redInterpVal, A_greenInterpVal, A_blueInterpVal])
-
-                B_redInterpVal = interpFuncB_R(BX, BY)
-                B_greenInterpVal = interpFuncB_G(BX, BY)
-                B_blueInterpVal = interpFuncB_B(BX, BY)
-                B_val = np.array([B_redInterpVal, B_greenInterpVal, B_blueInterpVal])
-
-                midwayRed = A_redInterpVal*(1 - dissolve_frac) + B_redInterpVal * dissolve_frac
-                midwayGreen = A_greenInterpVal*(1 - dissolve_frac) + B_greenInterpVal * dissolve_frac
-                midwayBlue = A_blueInterpVal*(1 - dissolve_frac) + B_blueInterpVal * dissolve_frac
-                midway[y, x, 0] = midwayRed
-                midway[y, x, 1] = midwayGreen
-                midway[y, x, 2] = midwayBlue
-
-    midway = (midway - np.min(midway) ) / (np.max(midway) - np.min(midway))
-    # skio.imshow(midway)
-    # skio.show()
-    return midway
-"""
